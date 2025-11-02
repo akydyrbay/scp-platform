@@ -1,0 +1,143 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  analyze:
+    name: Code Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.9.2'
+      
+      - name: Install dependencies
+        run: |
+          cd scp-mobile-shared && flutter pub get
+          cd ../scp-consumer-app && flutter pub get
+          cd ../scp-supplier-sales-app && flutter pub get
+      
+      - name: Analyze code
+        run: |
+          cd scp-mobile-shared && flutter analyze
+          cd ../scp-consumer-app && flutter analyze
+          cd ../scp-supplier-sales-app && flutter analyze
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.9.2'
+      
+      - name: Install dependencies
+        run: |
+          cd scp-mobile-shared && flutter pub get
+          cd ../scp-consumer-app && flutter pub get
+          cd ../scp-supplier-sales-app && flutter pub get
+      
+      - name: Run tests
+        run: |
+          cd scp-mobile-shared && flutter test
+          cd ../scp-consumer-app && flutter test
+          cd ../scp-supplier-sales-app && flutter test
+
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    needs: [analyze, test]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.9.2'
+      
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      
+      - name: Install dependencies
+        run: |
+          cd scp-mobile-shared && flutter pub get
+          cd ../scp-consumer-app && flutter pub get
+          cd ../scp-supplier-sales-app && flutter pub get
+      
+      - name: Build Consumer APK
+        run: |
+          cd scp-consumer-app
+          flutter build apk --release --dart-define=ENV=production
+      
+      - name: Build Supplier APK
+        run: |
+          cd scp-supplier-sales-app
+          flutter build apk --release --dart-define=ENV=production
+      
+      - name: Upload Consumer APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: consumer-apk
+          path: scp-consumer-app/build/app/outputs/flutter-apk/app-release.apk
+      
+      - name: Upload Supplier APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: supplier-apk
+          path: scp-supplier-sales-app/build/app/outputs/flutter-apk/app-release.apk
+
+  build-ios:
+    name: Build iOS
+    runs-on: macos-latest
+    needs: [analyze, test]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.9.2'
+      
+      - name: Install dependencies
+        run: |
+          cd scp-mobile-shared && flutter pub get
+          cd ../scp-consumer-app && flutter pub get
+          cd ../scp-supplier-sales-app && flutter pub get
+      
+      - name: Build Consumer iOS
+        run: |
+          cd scp-consumer-app
+          flutter build ios --release --dart-define=ENV=production --no-codesign
+      
+      - name: Build Supplier iOS
+        run: |
+          cd scp-supplier-sales-app
+          flutter build ios --release --dart-define=ENV=production --no-codesign
+      
+      - name: Upload Consumer IPA
+        uses: actions/upload-artifact@v3
+        with:
+          name: consumer-ipa
+          path: scp-consumer-app/build/ios/iphoneos/Runner.app
+      
+      - name: Upload Supplier IPA
+        uses: actions/upload-artifact@v3
+        with:
+          name: supplier-ipa
+          path: scp-supplier-sales-app/build/ios/iphoneos/Runner.app
+

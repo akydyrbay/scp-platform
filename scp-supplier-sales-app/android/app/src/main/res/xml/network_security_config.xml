@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Production: Only allow HTTPS connections -->
+    <base-config cleartextTrafficAllowed="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    
+    <!-- Development: Allow localhost for testing -->
+    <domain-config cleartextTrafficAllowed="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+    
+    <!-- Certificate pinning for production API -->
+    <!-- Uncomment and configure when API SSL certificate is finalized -->
+    <!--
+    <domain-config>
+        <domain includeSubdomains="true">api.scp-platform.com</domain>
+        <pin-set>
+            <pin digest="SHA-256">YOUR_CERTIFICATE_PIN_HERE</pin>
+        </pin-set>
+    </domain-config>
+    -->
+</network-security-config>
+
