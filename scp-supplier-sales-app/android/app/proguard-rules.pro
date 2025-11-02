@@ -8,6 +8,11 @@
 -keep class io.flutter.**  { *; }
 -keep class io.flutter.plugins.**  { *; }
 
+# Ignore Play Core classes for deferred components (not used)
+-dontwarn com.google.android.play.core.splitcompat.**
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**
+
 # Dio
 -keep class dio.** { *; }
 -dontwarn dio.**
