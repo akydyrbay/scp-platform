@@ -73,7 +73,7 @@ class _SupplierChatScreenState extends State<SupplierChatScreen> {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
-    if (image != null) {
+    if (image != null && mounted) {
       context.read<ChatSalesCubit>().sendImage(
             conversationId: widget.conversationId,
             imageFile: File(image.path),
@@ -221,7 +221,7 @@ class _SupplierChatScreenState extends State<SupplierChatScreen> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
+                  color: Colors.grey.withValues(alpha: 0.2),
                   spreadRadius: 1,
                   blurRadius: 5,
                 ),
@@ -304,7 +304,7 @@ class _SupplierChatScreenState extends State<SupplierChatScreen> {
       child: ActionChip(
         label: Text(text),
         onPressed: () => _useCannedReply(text),
-        backgroundColor: AppThemeSupplier.primaryColor.withOpacity(0.1),
+        backgroundColor: AppThemeSupplier.primaryColor.withValues(alpha: 0.1),
         labelStyle: TextStyle(color: AppThemeSupplier.primaryColor),
       ),
     );

@@ -63,7 +63,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
-    if (image != null) {
+    if (image != null && mounted) {
       context.read<ChatSalesCubit>().sendImage(
             conversationId: widget.conversationId,
             imageFile: File(image.path),
@@ -77,16 +77,18 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
         type: FileType.any,
       );
       
-      if (result != null && result.files.single.path != null) {
+      if (result != null && result.files.single.path != null && mounted) {
         context.read<ChatSalesCubit>().sendFile(
               conversationId: widget.conversationId,
               file: File(result.files.single.path!),
             );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to pick file: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick file: $e')),
+        );
+      }
     }
   }
 
@@ -210,7 +212,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
                   color: Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
+                      color: Colors.grey.withValues(alpha: 0.2),
                       spreadRadius: 1,
                       blurRadius: 5,
                     ),

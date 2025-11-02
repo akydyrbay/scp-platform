@@ -155,7 +155,7 @@ class _ComplaintLogScreenState extends State<ComplaintLogScreen> {
                       _selectedPriority = priority;
                     });
                   },
-                  selectedColor: _getPriorityColor(priority).withOpacity(0.2),
+                  selectedColor: _getPriorityColor(priority).withValues(alpha: 0.2),
                   labelStyle: TextStyle(
                     color: _selectedPriority == priority
                         ? _getPriorityColor(priority)
