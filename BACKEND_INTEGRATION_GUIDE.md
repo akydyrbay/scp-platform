@@ -10,17 +10,18 @@
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Architecture](#architecture)
-3. [API Structure](#api-structure)
-4. [Authentication & Authorization](#authentication--authorization)
-5. [Data Models & Schemas](#data-models--schemas)
-6. [Go Backend Implementation](#go-backend-implementation)
-7. [API Endpoints Specification](#api-endpoints-specification)
-8. [Real-time Features (WebSocket)](#real-time-features-websocket)
-9. [File Upload Handling](#file-upload-handling)
-10. [Error Handling](#error-handling)
-11. [Testing & Validation](#testing--validation)
-12. [Deployment Configuration](#deployment-configuration)
+2. [Flutter Frontend Files Requiring Backend Integration](#flutter-frontend-files-requiring-backend-integration)
+3. [Architecture](#architecture)
+4. [API Structure](#api-structure)
+5. [Authentication & Authorization](#authentication--authorization)
+6. [Data Models & Schemas](#data-models--schemas)
+7. [Go Backend Implementation](#go-backend-implementation)
+8. [API Endpoints Specification](#api-endpoints-specification)
+9. [Real-time Features (WebSocket)](#real-time-features-websocket)
+10. [File Upload Handling](#file-upload-handling)
+11. [Error Handling](#error-handling)
+12. [Testing & Validation](#testing--validation)
+13. [Deployment Configuration](#deployment-configuration)
 
 ---
 
@@ -32,6 +33,362 @@ The SCP Platform consists of:
 - **Supplier Web Portal** (Next.js) - For suppliers (owners/managers)
 
 All three applications connect to a single REST API backend. This guide provides complete integration specifications for implementing the backend in Go.
+
+---
+
+## Flutter Frontend Files Requiring Backend Integration
+
+This section lists all the Dart files in the Flutter mobile applications that need to be updated or configured to work with the backend API services. These files already contain service integrations and will need to be verified/updated once the backend is implemented.
+
+### Shared Service Layer (`scp-mobile-shared`)
+
+The shared package contains all the service classes that make HTTP requests to the backend API. These services need to be configured with the correct API base URL and endpoint paths.
+
+#### Core Service Files
+
+**Path:** `scp-mobile-shared/lib/services/http_service.dart`
+- **Purpose:** Base HTTP client with authentication interceptors
+- **Backend Integration:** 
+  - Uses `AppConfig.baseUrl` - verify this matches your backend URL
+  - Handles JWT token injection in Authorization header
+  - Manages token refresh on 401 errors
+- **Status:** Already configured for backend integration
+
+**Path:** `scp-mobile-shared/lib/services/auth_service.dart`
+- **Purpose:** Authentication API calls (login, logout, refresh token)
+- **Backend Endpoints Used:**
+  - `POST /api/v1/auth/login`
+  - `POST /api/v1/auth/refresh`
+  - `POST /api/v1/auth/logout`
+  - `GET /api/v1/auth/me`
+- **Status:** Ready for backend integration
+
+**Path:** `scp-mobile-shared/lib/services/storage_service.dart`
+- **Purpose:** Local storage for auth tokens and user data
+- **Backend Integration:** No direct API calls, but stores tokens from auth service
+- **Status:** Ready
+
+#### Feature-Specific Service Files
+
+**Path:** `scp-mobile-shared/lib/services/product_service.dart`
+- **Purpose:** Product listing and details
+- **Backend Endpoints Used:**
+  - `GET /api/v1/consumer/products` (for consumer app)
+  - `GET /api/v1/supplier/products` (for supplier app)
+  - `GET /api/v1/consumer/products/:id`
+- **Status:** Ready for backend integration
+
+**Path:** `scp-mobile-shared/lib/services/supplier_service.dart`
+- **Purpose:** Supplier discovery and link management
+- **Backend Endpoints Used:**
+  - `GET /api/v1/consumer/suppliers`
+  - `GET /api/v1/consumer/suppliers/:id`
+  - `POST /api/v1/suppliers/:id/link-request`
+  - `GET /api/v1/consumer/supplier-links`
+- **Status:** Ready for backend integration
+
+**Path:** `scp-mobile-shared/lib/services/order_service.dart`
+- **Purpose:** Order management (create, list, details)
+- **Backend Endpoints Used:**
+  - `POST /api/v1/consumer/orders`
+  - `GET /api/v1/consumer/orders`
+  - `GET /api/v1/consumer/orders/:id`
+  - `GET /api/v1/supplier/orders` (for supplier app)
+  - `POST /api/v1/supplier/orders/:id/accept`
+  - `POST /api/v1/supplier/orders/:id/reject`
+- **Status:** Ready for backend integration
+
+**Path:** `scp-mobile-shared/lib/services/chat_service.dart`
+- **Purpose:** Consumer chat with suppliers
+- **Backend Endpoints Used:**
+  - `GET /api/v1/consumer/conversations`
+  - `GET /api/v1/consumer/conversations/:id/messages`
+  - `POST /api/v1/consumer/conversations/:id/messages`
+  - `POST /api/v1/consumer/conversations/:id/messages/read`
+  - `POST /api/v1/consumer/conversations/:id/start-complaint`
+- **Status:** Ready for backend integration
+
+**Path:** `scp-mobile-shared/lib/services/chat_service_sales.dart`
+- **Purpose:** Supplier sales rep chat with consumers
+- **Backend Endpoints Used:**
+  - `GET /api/v1/supplier/conversations`
+  - `GET /api/v1/supplier/conversations/:id/messages`
+  - `POST /api/v1/supplier/conversations/:id/messages`
+  - `POST /api/v1/supplier/conversations/:id/messages/read`
+- **Status:** Ready for backend integration
+
+**Path:** `scp-mobile-shared/lib/services/notification_service.dart`
+- **Purpose:** Push notifications and in-app notifications
+- **Backend Endpoints Used:**
+  - `GET /api/v1/notifications`
+  - `POST /api/v1/notifications/:id/read`
+  - `POST /api/v1/notifications/read-all`
+- **Status:** Ready for backend integration
+
+**Path:** `scp-mobile-shared/lib/services/complaint_service.dart`
+- **Purpose:** Complaint logging and management (supplier sales)
+- **Backend Endpoints Used:**
+  - `POST /api/v1/supplier/complaints`
+  - `POST /api/v1/supplier/complaints/:id/escalate`
+  - `GET /api/v1/supplier/complaints`
+- **Status:** Ready for backend integration
+
+**Path:** `scp-mobile-shared/lib/services/canned_reply_service.dart`
+- **Purpose:** Canned reply templates for sales reps
+- **Backend Endpoints Used:**
+  - `GET /api/v1/supplier/canned-replies`
+  - `POST /api/v1/supplier/canned-replies`
+  - `PUT /api/v1/supplier/canned-replies/:id`
+  - `DELETE /api/v1/supplier/canned-replies/:id`
+- **Status:** Ready for backend integration
+
+### Consumer App Files (`scp-consumer-app`)
+
+These files use the services above and need to be verified to work correctly with the backend.
+
+#### Cubits (State Management)
+
+**Path:** `scp-consumer-app/lib/cubits/auth_cubit.dart`
+- **Uses:** `AuthService`
+- **Backend Integration:** Handles login, logout, token refresh
+- **Actions Required:** 
+  - Verify token storage/retrieval works correctly
+  - Test authentication flow
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/cubits/product_cubit.dart`
+- **Uses:** `ProductService`
+- **Backend Integration:** Loads products from linked suppliers
+- **Actions Required:**
+  - Verify product listing displays correctly
+  - Test product search functionality
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/cubits/supplier_cubit.dart`
+- **Uses:** `SupplierService`
+- **Backend Integration:** Supplier discovery and link requests
+- **Actions Required:**
+  - Verify supplier listing
+  - Test link request flow
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/cubits/order_cubit.dart`
+- **Uses:** `OrderService`
+- **Backend Integration:** Order creation, listing, details
+- **Actions Required:**
+  - Verify order creation flow
+  - Test order status updates
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/cubits/chat_cubit.dart`
+- **Uses:** `ChatService`
+- **Backend Integration:** Messaging with suppliers
+- **Actions Required:**
+  - Verify message sending/receiving
+  - Test real-time updates (WebSocket integration)
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/cubits/cart_cubit.dart`
+- **Uses:** No direct service (local state management)
+- **Backend Integration:** Creates order payload for `OrderService`
+- **Actions Required:**
+  - Verify cart to order conversion
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/cubits/notification_cubit.dart`
+- **Uses:** `NotificationService`
+- **Backend Integration:** Fetches and marks notifications as read
+- **Actions Required:**
+  - Verify notification display
+  - Test notification read status updates
+- **Status:** Ready for testing
+
+#### Screens (UI Components)
+
+**Path:** `scp-consumer-app/lib/screens/auth/login_screen.dart`
+- **Integrates With:** `AuthCubit`
+- **Backend Integration:** Login form submission
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/screens/home/home_screen.dart`
+- **Integrates With:** Multiple cubits (Product, Supplier, Order)
+- **Backend Integration:** Displays products, suppliers, orders
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/screens/supplier/supplier_discovery_screen.dart`
+- **Integrates With:** `SupplierCubit`
+- **Backend Integration:** Supplier search and link requests
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/screens/order/orders_screen.dart`
+- **Integrates With:** `OrderCubit`
+- **Backend Integration:** Order history and details
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/screens/chat/chat_list_screen.dart`
+- **Integrates With:** `ChatCubit`
+- **Backend Integration:** Conversation listing
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/screens/chat/chat_message_screen.dart`
+- **Integrates With:** `ChatCubit`
+- **Backend Integration:** Message sending/receiving
+- **Status:** Ready for testing
+
+**Path:** `scp-consumer-app/lib/main.dart`
+- **Integrates With:** All cubits (BlocProvider setup)
+- **Backend Integration:** App initialization, service configuration
+- **Actions Required:**
+  - Verify `AppConfig.initialize()` sets correct base URL
+  - Test app startup flow
+- **Status:** Ready for testing
+
+### Supplier Sales App Files (`scp-supplier-sales-app`)
+
+These files are specific to the supplier sales representative mobile app.
+
+#### Cubits (State Management)
+
+**Path:** `scp-supplier-sales-app/lib/cubits/auth_cubit.dart`
+- **Uses:** `AuthService`
+- **Backend Integration:** Login for sales reps
+- **Actions Required:**
+  - Verify role-based login (`role: 'sales_rep'`)
+  - Test authentication flow
+- **Status:** Ready for testing
+
+**Path:** `scp-supplier-sales-app/lib/cubits/dashboard_cubit.dart`
+- **Uses:** `ChatServiceSales`, `OrderService`, `NotificationService`
+- **Backend Integration:** Dashboard statistics and recent items
+- **Backend Endpoints Used:**
+  - `GET /api/v1/supplier/dashboard/stats`
+  - Conversations, orders, notifications
+- **Actions Required:**
+  - Verify dashboard data loading
+  - Test real-time updates
+- **Status:** Ready for testing
+
+**Path:** `scp-supplier-sales-app/lib/cubits/chat_sales_cubit.dart`
+- **Uses:** `ChatServiceSales`
+- **Backend Integration:** Sales rep messaging with consumers
+- **Actions Required:**
+  - Verify message sending/receiving
+  - Test canned replies integration
+- **Status:** Ready for testing
+
+**Path:** `scp-supplier-sales-app/lib/cubits/order_cubit.dart`
+- **Uses:** `OrderService`
+- **Backend Integration:** Order acceptance/rejection
+- **Actions Required:**
+  - Verify order status updates
+  - Test accept/reject flow
+- **Status:** Ready for testing
+
+**Path:** `scp-supplier-sales-app/lib/cubits/notification_cubit.dart`
+- **Uses:** `NotificationService`
+- **Backend Integration:** Notification management
+- **Status:** Ready for testing
+
+#### Screens (UI Components)
+
+**Path:** `scp-supplier-sales-app/lib/screens/auth/login_screen.dart`
+- **Integrates With:** `AuthCubit`
+- **Backend Integration:** Sales rep login
+- **Status:** Ready for testing
+
+**Path:** `scp-supplier-sales-app/lib/screens/dashboard/dashboard_screen.dart`
+- **Integrates With:** `DashboardCubit`
+- **Backend Integration:** Dashboard display
+- **Status:** Ready for testing
+
+**Path:** `scp-supplier-sales-app/lib/screens/chat/chat_list_screen.dart`
+- **Integrates With:** `ChatSalesCubit`
+- **Backend Integration:** Conversation listing
+- **Status:** Ready for testing
+
+**Path:** `scp-supplier-sales-app/lib/screens/chat/chat_message_screen.dart`
+- **Integrates With:** `ChatSalesCubit`
+- **Backend Integration:** Message interface
+- **Status:** Ready for testing (recently fixed to use ChatSalesCubit)
+
+**Path:** `scp-supplier-sales-app/lib/screens/supplier_chat/supplier_chat_screen.dart`
+- **Integrates With:** `ChatSalesCubit`
+- **Backend Integration:** Enhanced chat with canned replies
+- **Actions Required:**
+  - Verify canned replies functionality
+  - Test complaint escalation
+- **Status:** Ready for testing
+
+**Path:** `scp-supplier-sales-app/lib/screens/order/orders_screen.dart`
+- **Integrates With:** `OrderCubit`
+- **Backend Integration:** Order management interface
+- **Status:** Ready for testing
+
+**Path:** `scp-supplier-sales-app/lib/main.dart`
+- **Integrates With:** All cubits (BlocProvider setup)
+- **Backend Integration:** App initialization
+- **Actions Required:**
+  - Verify `AppConfig.initialize()` sets correct base URL
+- **Status:** Ready for testing
+
+### Configuration Files
+
+**Path:** `scp-mobile-shared/lib/config/app_config.dart`
+- **Purpose:** API base URL and configuration
+- **Backend Integration:** **CRITICAL** - This file must be updated with your backend URL
+- **Actions Required:**
+  - Set `baseUrl` to your backend API endpoint (e.g., `https://api.scp-platform.com/api/v1`)
+  - Configure environment-specific URLs (dev/staging/prod)
+  - Verify timeout settings are appropriate
+- **Status:** **REQUIRES UPDATE** before testing
+
+### Summary Checklist
+
+#### Files Requiring Configuration Changes:
+- [ ] `scp-mobile-shared/lib/config/app_config.dart` - **MUST UPDATE** base URL
+
+#### Files Ready for Backend Testing (Consumer App):
+- [ ] `scp-consumer-app/lib/cubits/auth_cubit.dart`
+- [ ] `scp-consumer-app/lib/cubits/product_cubit.dart`
+- [ ] `scp-consumer-app/lib/cubits/supplier_cubit.dart`
+- [ ] `scp-consumer-app/lib/cubits/order_cubit.dart`
+- [ ] `scp-consumer-app/lib/cubits/chat_cubit.dart`
+- [ ] `scp-consumer-app/lib/cubits/notification_cubit.dart`
+
+#### Files Ready for Backend Testing (Supplier Sales App):
+- [ ] `scp-supplier-sales-app/lib/cubits/auth_cubit.dart`
+- [ ] `scp-supplier-sales-app/lib/cubits/dashboard_cubit.dart`
+- [ ] `scp-supplier-sales-app/lib/cubits/chat_sales_cubit.dart`
+- [ ] `scp-supplier-sales-app/lib/cubits/order_cubit.dart`
+- [ ] `scp-supplier-sales-app/lib/cubits/notification_cubit.dart`
+
+#### Service Files (Already Implemented):
+- [x] `scp-mobile-shared/lib/services/http_service.dart`
+- [x] `scp-mobile-shared/lib/services/auth_service.dart`
+- [x] `scp-mobile-shared/lib/services/product_service.dart`
+- [x] `scp-mobile-shared/lib/services/supplier_service.dart`
+- [x] `scp-mobile-shared/lib/services/order_service.dart`
+- [x] `scp-mobile-shared/lib/services/chat_service.dart`
+- [x] `scp-mobile-shared/lib/services/chat_service_sales.dart`
+- [x] `scp-mobile-shared/lib/services/notification_service.dart`
+- [x] `scp-mobile-shared/lib/services/complaint_service.dart`
+- [x] `scp-mobile-shared/lib/services/canned_reply_service.dart`
+
+### Integration Notes
+
+1. **API Base URL Configuration**: The most critical step is updating `app_config.dart` with your backend API base URL. All service calls depend on this configuration.
+
+2. **Authentication Flow**: The apps use JWT tokens stored locally. Ensure your backend implements the token refresh mechanism as specified in the Authentication section.
+
+3. **Error Handling**: All services throw exceptions that are caught by cubits. Verify error messages are user-friendly.
+
+4. **WebSocket Integration**: Chat services may need WebSocket configuration for real-time messaging. Check the Real-time Features section for implementation details.
+
+5. **File Uploads**: Image uploads in chat use `HttpService.postFile()`. Ensure your backend handles multipart form data correctly.
+
+6. **Pagination**: List endpoints (products, orders, conversations) support pagination. Verify pagination parameters work correctly.
+
+7. **Role-Based Access**: Some endpoints are role-specific. Ensure the JWT token includes the correct role information.
 
 ---
 

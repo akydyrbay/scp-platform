@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../cubits/auth_cubit.dart';
+import '../../cubits/chat_sales_cubit.dart';
 import 'package:scp_mobile_shared/widgets/loading_indicator.dart';
 import 'package:scp_mobile_shared/models/message_model.dart';
 
@@ -31,8 +32,8 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ChatCubit>().loadMessages(widget.conversationId);
-    context.read<ChatCubit>().markAsRead(widget.conversationId);
+    context.read<ChatSalesCubit>().loadMessages(widget.conversationId);
+    context.read<ChatSalesCubit>().markAsRead(widget.conversationId);
   }
 
   @override
@@ -45,7 +46,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
   void _sendMessage() {
     final message = _messageController.text.trim();
     if (message.isNotEmpty) {
-      context.read<ChatCubit>().sendMessage(
+      context.read<ChatSalesCubit>().sendMessage(
             conversationId: widget.conversationId,
             content: message,
           );
@@ -63,7 +64,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image != null) {
-      context.read<ChatCubit>().sendImage(
+      context.read<ChatSalesCubit>().sendImage(
             conversationId: widget.conversationId,
             imageFile: File(image.path),
           );
@@ -77,7 +78,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
       );
       
       if (result != null && result.files.single.path != null) {
-        context.read<ChatCubit>().sendFile(
+        context.read<ChatSalesCubit>().sendFile(
               conversationId: widget.conversationId,
               file: File(result.files.single.path!),
             );
@@ -101,7 +102,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            context.read<ChatCubit>().clearSelection();
+            context.read<ChatSalesCubit>().clearSelection();
             Navigator.pop(context);
           },
         ),
@@ -118,7 +119,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
           title: Text(widget.supplierName),
         ),
       ),
-      body: BlocBuilder<ChatCubit, ChatState>(
+      body: BlocBuilder<ChatSalesCubit, ChatSalesState>(
         builder: (context, state) {
           final messages = state.currentMessages;
 
