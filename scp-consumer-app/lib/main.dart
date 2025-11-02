@@ -5,7 +5,6 @@ import 'generated/l10n/app_localizations.dart';
 import 'package:scp_mobile_shared/scp_mobile_shared.dart';
 
 // Config
-import 'package:scp_mobile_shared/config/app_theme.dart';
 
 // Cubits
 import 'cubits/auth_cubit.dart';

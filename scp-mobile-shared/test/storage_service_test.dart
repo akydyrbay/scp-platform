@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:scp_mobile_shared/services/storage_service.dart';
-import 'package:scp_mobile_shared/config/app_config.dart';
 
 void main() {
   group('StorageService', () {

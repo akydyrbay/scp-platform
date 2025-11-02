@@ -1,4 +1,5 @@
 /// Validation utilities for forms and inputs
+library;
 
 class AppValidators {
   /// Validates email format

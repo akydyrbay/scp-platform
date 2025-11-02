@@ -6,7 +6,6 @@ import '../../cubits/chat_sales_cubit.dart';
 import '../../cubits/auth_cubit.dart';
 import 'package:scp_mobile_shared/models/message_model.dart';
 import 'package:scp_mobile_shared/config/app_theme_supplier.dart';
-import '../chat/chat_message_screen.dart';
 
 /// Enhanced chat screen for supplier sales reps with canned replies
 class SupplierChatScreen extends StatefulWidget {

@@ -1,5 +1,5 @@
 /// Main library export for SCP Mobile Shared package
-library scp_mobile_shared;
+library;
 
 // Export all public APIs
 export 'models/models.dart';
