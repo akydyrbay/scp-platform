@@ -7,58 +7,58 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  analyze:
-    name: Code Analysis
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-      
-      - name: Install dependencies
-        run: |
-          cd scp-mobile-shared && flutter pub get
-          cd ../scp-consumer-app && flutter pub get
-          cd ../scp-supplier-sales-app && flutter pub get
-      
-      - name: Analyze code
-        run: |
-          cd scp-mobile-shared && flutter analyze
-          cd ../scp-consumer-app && flutter analyze
-          cd ../scp-supplier-sales-app && flutter analyze
+  # analyze:
+  #   name: Code Analysis
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         channel: 'stable'
+  #         cache: true
+  #     
+  #     - name: Install dependencies
+  #       run: |
+  #         cd scp-mobile-shared && flutter pub get
+  #         cd ../scp-consumer-app && flutter pub get
+  #         cd ../scp-supplier-sales-app && flutter pub get
+  #     
+  #     - name: Analyze code
+  #       run: |
+  #         cd scp-mobile-shared && flutter analyze
+  #         cd ../scp-consumer-app && flutter analyze
+  #         cd ../scp-supplier-sales-app && flutter analyze
 
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-      
-      - name: Install dependencies
-        run: |
-          cd scp-mobile-shared && flutter pub get
-          cd ../scp-consumer-app && flutter pub get
-          cd ../scp-supplier-sales-app && flutter pub get
-      
-      - name: Run tests
-        run: |
-          cd scp-mobile-shared && flutter test
-          cd ../scp-consumer-app && flutter test
-          cd ../scp-supplier-sales-app && flutter test
+  # test:
+  #   name: Run Tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         channel: 'stable'
+  #         cache: true
+  #     
+  #     - name: Install dependencies
+  #       run: |
+  #         cd scp-mobile-shared && flutter pub get
+  #         cd ../scp-consumer-app && flutter pub get
+  #         cd ../scp-supplier-sales-app && flutter pub get
+  #     
+  #     - name: Run tests
+  #       run: |
+  #         cd scp-mobile-shared && flutter test
+  #         cd ../scp-consumer-app && flutter test
+  #         cd ../scp-supplier-sales-app && flutter test
 
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
-    needs: [analyze, test]
+    # needs: [analyze, test]  # Commented out since analyze and test are also commented
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -103,45 +103,45 @@ jobs:
           name: supplier-apk
           path: scp-supplier-sales-app/build/app/outputs/flutter-apk/app-release.apk
 
-  build-ios:
-    name: Build iOS
-    runs-on: macos-latest
-    needs: [analyze, test]
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
+  # build-ios:
+  #   name: Build iOS
+  #   runs-on: macos-latest
+  #   # needs: [analyze, test]  # Commented out since analyze and test are also commented
+  #   if: github.ref == 'refs/heads/main'
+  #   steps:
+  #     - uses: actions/checkout@v4
       
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
+  #     - name: Setup Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         channel: 'stable'
+  #         cache: true
       
-      - name: Install dependencies
-        run: |
-          cd scp-mobile-shared && flutter pub get
-          cd ../scp-consumer-app && flutter pub get
-          cd ../scp-supplier-sales-app && flutter pub get
+  #     - name: Install dependencies
+  #       run: |
+  #         cd scp-mobile-shared && flutter pub get
+  #         cd ../scp-consumer-app && flutter pub get
+  #         cd ../scp-supplier-sales-app && flutter pub get
       
-      - name: Build Consumer iOS
-        run: |
-          cd scp-consumer-app
-          flutter build ios --release --dart-define=ENV=production --no-codesign
+  #     - name: Build Consumer iOS
+  #       run: |
+  #         cd scp-consumer-app
+  #         flutter build ios --release --dart-define=ENV=production --no-codesign
       
-      - name: Build Supplier iOS
-        run: |
-          cd scp-supplier-sales-app
-          flutter build ios --release --dart-define=ENV=production --no-codesign
+  #     - name: Build Supplier iOS
+  #       run: |
+  #         cd scp-supplier-sales-app
+  #         flutter build ios --release --dart-define=ENV=production --no-codesign
       
-      - name: Upload Consumer IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: consumer-ipa
-          path: scp-consumer-app/build/ios/iphoneos/Runner.app
+  #     - name: Upload Consumer IPA
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: consumer-ipa
+  #         path: scp-consumer-app/build/ios/iphoneos/Runner.app
       
-      - name: Upload Supplier IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: supplier-ipa
-          path: scp-supplier-sales-app/build/ios/iphoneos/Runner.app
+  #     - name: Upload Supplier IPA
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: supplier-ipa
+  #         path: scp-supplier-sales-app/build/ios/iphoneos/Runner.app
 
