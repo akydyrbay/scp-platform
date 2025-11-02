@@ -110,7 +110,7 @@ class _LinkRequestsScreenState extends State<LinkRequestsScreen> {
                   trailing: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(request.status.name).withOpacity(0.1),
+                      color: _getStatusColor(request.status.name).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(

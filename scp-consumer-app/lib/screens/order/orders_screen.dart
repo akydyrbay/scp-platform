@@ -185,7 +185,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: _getStatusColor(order.status.name).withOpacity(0.1),
+            color: _getStatusColor(order.status.name).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
