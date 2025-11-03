@@ -81,6 +81,34 @@ jobs:
           cd ../scp-consumer-app && flutter pub get
           cd ../scp-supplier-sales-app && flutter pub get
       
+      # Consumer App Signing Setup (optional - only if secrets are configured)
+      - name: Setup Consumer Keystore
+        if: ${{ secrets.CONSUMER_KEYSTORE_BASE64 != '' }}
+        working-directory: scp-consumer-app/android
+        run: |
+          mkdir -p keystores
+          echo "${{ secrets.CONSUMER_KEYSTORE_BASE64 }}" | base64 -d > keystores/consumer-release-key.jks
+          cat > key.properties << EOF
+          storePassword=${{ secrets.CONSUMER_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.CONSUMER_KEY_PASSWORD }}
+          keyAlias=scp_consumer_key
+          storeFile=../keystores/consumer-release-key.jks
+          EOF
+      
+      # Supplier App Signing Setup (optional - only if secrets are configured)
+      - name: Setup Supplier Keystore
+        if: ${{ secrets.SUPPLIER_KEYSTORE_BASE64 != '' }}
+        working-directory: scp-supplier-sales-app/android
+        run: |
+          mkdir -p keystores
+          echo "${{ secrets.SUPPLIER_KEYSTORE_BASE64 }}" | base64 -d > keystores/supplier-release-key.jks
+          cat > key.properties << EOF
+          storePassword=${{ secrets.SUPPLIER_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.SUPPLIER_KEY_PASSWORD }}
+          keyAlias=scp_supplier_key
+          storeFile=../keystores/supplier-release-key.jks
+          EOF
+      
       - name: Build Consumer APK
         run: |
           cd scp-consumer-app
@@ -90,6 +118,25 @@ jobs:
         run: |
           cd scp-supplier-sales-app
           flutter build apk --release --dart-define=ENV=production
+      
+      # Verify APKs are signed (if signing was configured)
+      - name: Verify Consumer APK Signature
+        if: ${{ secrets.CONSUMER_KEYSTORE_BASE64 != '' }}
+        run: |
+          if command -v apksigner &> /dev/null; then
+            apksigner verify --verbose scp-consumer-app/build/app/outputs/flutter-apk/app-release.apk || echo "APK verification failed"
+          else
+            echo "⚠️  apksigner not available, skipping verification"
+          fi
+      
+      - name: Verify Supplier APK Signature
+        if: ${{ secrets.SUPPLIER_KEYSTORE_BASE64 != '' }}
+        run: |
+          if command -v apksigner &> /dev/null; then
+            apksigner verify --verbose scp-supplier-sales-app/build/app/outputs/flutter-apk/app-release.apk || echo "APK verification failed"
+          else
+            echo "⚠️  apksigner not available, skipping verification"
+          fi
       
       - name: Upload Consumer APK
         uses: actions/upload-artifact@v4
