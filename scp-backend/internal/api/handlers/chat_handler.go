@@ -59,7 +59,6 @@ func (h *ChatHandler) GetMessages(c *gin.Context) {
 }
 
 func (h *ChatHandler) SendMessage(c *gin.Context) {
-	conversationID := c.Param("id")
 	senderID := c.GetString("user_id")
 	senderRole := c.GetString("role")
 

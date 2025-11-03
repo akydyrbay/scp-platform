@@ -135,7 +135,7 @@ func (h *OrderHandler) GetCurrentOrders(c *gin.Context) {
 	consumerID := c.GetString("user_id")
 	page, pageSize := ParsePagination(c)
 
-	orders, total, err := h.orderRepo.GetByConsumerID(consumerID, page, pageSize)
+	orders, _, err := h.orderRepo.GetByConsumerID(consumerID, page, pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse(err.Error()))
 		return

@@ -20,7 +20,6 @@ func NewComplaintHandler(complaintRepo *repository.ComplaintRepository) *Complai
 }
 
 func (h *ComplaintHandler) CreateComplaint(c *gin.Context) {
-	salesRepID := c.GetString("user_id")
 	supplierID := c.GetString("supplier_id")
 
 	var req struct {

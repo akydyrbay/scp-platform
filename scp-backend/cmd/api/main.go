@@ -48,8 +48,6 @@ func main() {
 	complaintRepo := repository.NewComplaintRepository(db.DB)
 	conversationRepo := repository.NewConversationRepository(db.DB)
 	messageRepo := repository.NewMessageRepository(db.DB)
-	notificationRepo := repository.NewNotificationRepository(db.DB)
-	cannedReplyRepo := repository.NewCannedReplyRepository(db.DB)
 
 	// Initialize JWT service
 	jwtService := jwt.NewJWTService(

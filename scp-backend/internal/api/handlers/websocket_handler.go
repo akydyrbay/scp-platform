@@ -4,11 +4,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
+	gorillaWS "github.com/gorilla/websocket"
 	"github.com/scp-platform/backend/internal/api/websocket"
 )
 
-var upgrader = websocket.Upgrader{
+var upgrader = gorillaWS.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true // Configure properly for production
 	},

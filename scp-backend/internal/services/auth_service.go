@@ -2,12 +2,11 @@ package services
 
 import (
 	"errors"
-	"time"
 
 	"github.com/scp-platform/backend/internal/models"
 	"github.com/scp-platform/backend/internal/repository"
 	"github.com/scp-platform/backend/pkg/jwt"
-	"github.com/scp-platform/backend/pkg/password"
+	pwd "github.com/scp-platform/backend/pkg/password"
 )
 
 type AuthService struct {
@@ -32,7 +31,7 @@ func (s *AuthService) Authenticate(email, password, role string) (*models.User, 
 		return nil, errors.New("invalid role")
 	}
 
-	if !password.Verify(password, user.PasswordHash) {
+	if !pwd.Verify(password, user.PasswordHash) {
 		return nil, errors.New("invalid credentials")
 	}
 
