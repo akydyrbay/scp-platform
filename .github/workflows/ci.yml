@@ -262,7 +262,7 @@ jobs:
         run: flutter pub get
 
       - name: Setup Consumer Keystore (if available)
-        if: secrets.CONSUMER_KEYSTORE_BASE64 != ''
+        if: ${{ secrets.CONSUMER_KEYSTORE_BASE64 != '' }}
         working-directory: scp-consumer-app/android
         run: |
           mkdir -p keystores
@@ -317,7 +317,7 @@ jobs:
         run: flutter pub get
 
       - name: Setup Supplier Keystore (if available)
-        if: secrets.SUPPLIER_KEYSTORE_BASE64 != ''
+        if: ${{ secrets.SUPPLIER_KEYSTORE_BASE64 != '' }}
         working-directory: scp-supplier-sales-app/android
         run: |
           mkdir -p keystores
