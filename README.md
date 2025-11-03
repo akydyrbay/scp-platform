@@ -402,8 +402,6 @@ Before first deployment:
 
 **The apps are PRODUCTION READY and can be deployed after completing the deployment checklist above.**
 
-See [DEPLOYMENT_READY.md](DEPLOYMENT_READY.md) for final verification status.
-
 ## 🤝 Contributing
 
 1. Follow Flutter style guidelines
@@ -420,8 +418,16 @@ Copyright © 2024 SCP Platform
 
 ## 📚 Additional Documentation
 
-- [Deployment Ready Status](DEPLOYMENT_READY.md) - Final verification report
+### Setup & Configuration
 - [Firebase Setup Guide](FIREBASE_SETUP.md) - Complete Firebase integration instructions
+- [Android Signing Setup](ANDROID_SIGNING_SETUP.md) - Complete guide for Android app signing
+- [Testing Artifacts Guide](TESTING_ARTIFACTS.md) - How to test CI/CD artifacts on devices
+
+### Troubleshooting & Development
+- [Troubleshooting APK Crashes](TROUBLESHOOTING_APK_CRASHES.md) - Common issues and solutions
+- [Backend Integration Guide](BACKEND_INTEGRATION_GUIDE.md) - Complete backend API integration instructions
+
+### App-Specific Documentation
 - [Consumer App README](scp-consumer-app/README.md) - Consumer app quick reference
 - [Supplier App README](scp-supplier-sales-app/README.md) - Supplier app quick reference
 - [Keystore Setup Guide](scp-consumer-app/android/keystores/README.md) - Android signing guide

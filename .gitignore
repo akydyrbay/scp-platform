@@ -51,6 +51,11 @@ app.*.map.json
 *.jks
 *.keystore
 
+# Base64 encoded keystores (for CI setup reference, but shouldn't be committed)
+*-keystore-base64.txt
+consumer-keystore-base64.txt
+supplier-keystore-base64.txt
+
 # Environment files
 .env
 .env.local
