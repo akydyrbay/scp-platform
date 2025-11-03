@@ -47,34 +47,16 @@ export default function IncidentsPage() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
   const queryClient = useQueryClient()
 
-  // Check if user has manager+ permissions
-  if (!hasPermission('manager')) {
-    return (
-      <DashboardLayout>
-        <div className="flex h-[60vh] items-center justify-center">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Access Denied</CardTitle>
-              <CardDescription>
-                You need to be a Manager or Owner to access this page.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
   const { data: complaints, isLoading } = useQuery({
     queryKey: ['complaints'],
     queryFn: () => getComplaints(token || undefined),
-    enabled: !!token,
+    enabled: !!token && hasPermission('manager'),
   })
 
   const { data: complaintDetails } = useQuery({
     queryKey: ['complaint', selectedComplaint],
     queryFn: () => getComplaint(selectedComplaint!, token || undefined),
-    enabled: !!selectedComplaint && isDialogOpen,
+    enabled: !!selectedComplaint && isDialogOpen && hasPermission('manager'),
   })
 
   const resolveMutation = useMutation({
@@ -100,6 +82,24 @@ export default function IncidentsPage() {
   } = useForm<ResolveFormValues>({
     resolver: zodResolver(resolveSchema),
   })
+
+  // Check if user has manager+ permissions
+  if (!hasPermission('manager')) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-[60vh] items-center justify-center">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Access Denied</CardTitle>
+              <CardDescription>
+                You need to be a Manager or Owner to access this page.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   const onSubmit = (data: ResolveFormValues) => {
     if (selectedComplaint) {

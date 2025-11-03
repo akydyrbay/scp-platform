@@ -56,28 +56,10 @@ export default function UsersPage() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
   const queryClient = useQueryClient()
 
-  // Check if user is owner
-  if (!hasPermission('owner')) {
-    return (
-      <DashboardLayout>
-        <div className="flex h-[60vh] items-center justify-center">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Access Denied</CardTitle>
-              <CardDescription>
-                You need to be an Owner to access this page.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </DashboardLayout>
-    )
-  }
-
   const { data: users, isLoading } = useQuery({
     queryKey: ['users'],
     queryFn: () => getUsers(token || undefined),
-    enabled: !!token,
+    enabled: !!token && hasPermission('owner'),
   })
 
   const createMutation = useMutation({
@@ -85,6 +67,7 @@ export default function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setIsDialogOpen(false)
+      reset()
       toast.success('User created successfully')
     },
     onError: (error: any) => {
@@ -116,6 +99,24 @@ export default function UsersPage() {
       role: 'manager',
     },
   })
+
+  // Check if user is owner
+  if (!hasPermission('owner')) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-[60vh] items-center justify-center">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Access Denied</CardTitle>
+              <CardDescription>
+                You need to be an Owner to access this page.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   const onSubmit = (data: UserFormValues) => {
     createMutation.mutate(data)

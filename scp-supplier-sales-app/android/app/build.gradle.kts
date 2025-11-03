@@ -18,7 +18,7 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.scp.supplier"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -41,18 +41,33 @@ android {
     signingConfigs {
         create("release") {
             if (keystorePropertiesFile.exists()) {
-                keyAlias = keystoreProperties["keyAlias"] as String?
-                keyPassword = keystoreProperties["keyPassword"] as String?
-                storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-                storePassword = keystoreProperties["storePassword"] as String?
+                val storeFileProperty = keystoreProperties["storeFile"] as String?
+                val storeFile = storeFileProperty?.let { 
+                    val filePath = if (it.startsWith("/")) it else rootProject.file(it).path
+                    val keystoreFile = file(filePath)
+                    if (keystoreFile.exists()) {
+                        keystoreFile
+                    } else {
+                        null
+                    }
+                }
+                
+                if (storeFile != null) {
+                    keyAlias = keystoreProperties["keyAlias"] as String?
+                    keyPassword = keystoreProperties["keyPassword"] as String?
+                    this.storeFile = storeFile
+                    storePassword = keystoreProperties["storePassword"] as String?
+                }
             }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
+            val releaseSigningConfig = signingConfigs.getByName("release")
+            val hasValidKeystore = releaseSigningConfig.storeFile?.let { it.exists() } ?: false
+            signingConfig = if (hasValidKeystore) {
+                releaseSigningConfig
             } else {
                 signingConfigs.getByName("debug")
             }
