@@ -60,7 +60,7 @@ class EnvironmentConfig {
 
     switch (environment) {
       case AppEnvironment.development:
-        return 'https://dev-api.scp-platform.com/api/v1';
+        return 'http://localhost:3000/api/v1';
       case AppEnvironment.staging:
         return 'https://staging-api.scp-platform.com/api/v1';
       case AppEnvironment.production:

@@ -1,0 +1,32 @@
+FROM golang:1.21-alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/api
+
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates tzdata
+
+WORKDIR /app
+
+# Create uploads directory
+RUN mkdir -p uploads
+
+# Copy the binary from builder
+COPY --from=builder /app/main .
+
+# Expose port
+EXPOSE 3000
+
+# Run the application
+CMD ["./main"]
+
