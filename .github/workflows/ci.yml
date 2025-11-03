@@ -262,9 +262,12 @@ jobs:
         run: flutter pub get
 
       - name: Setup Consumer Keystore (if available)
-        if: ${{ secrets.CONSUMER_KEYSTORE_BASE64 }}
         working-directory: scp-consumer-app/android
         run: |
+          if [ -z "${{ secrets.CONSUMER_KEYSTORE_BASE64 }}" ]; then
+            echo "Consumer keystore secret not available, skipping setup"
+            exit 0
+          fi
           mkdir -p keystores
           echo "${{ secrets.CONSUMER_KEYSTORE_BASE64 }}" | base64 -d > keystores/consumer-release-key.jks
           cat > key.properties << EOF
@@ -317,9 +320,12 @@ jobs:
         run: flutter pub get
 
       - name: Setup Supplier Keystore (if available)
-        if: ${{ secrets.SUPPLIER_KEYSTORE_BASE64 }}
         working-directory: scp-supplier-sales-app/android
         run: |
+          if [ -z "${{ secrets.SUPPLIER_KEYSTORE_BASE64 }}" ]; then
+            echo "Supplier keystore secret not available, skipping setup"
+            exit 0
+          fi
           mkdir -p keystores
           echo "${{ secrets.SUPPLIER_KEYSTORE_BASE64 }}" | base64 -d > keystores/supplier-release-key.jks
           cat > key.properties << EOF
