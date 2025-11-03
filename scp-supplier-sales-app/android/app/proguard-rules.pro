@@ -17,6 +17,24 @@
 -keep class dio.** { *; }
 -dontwarn dio.**
 
+# Flutter Secure Storage
+-keep class androidx.security.crypto.** { *; }
+-dontwarn androidx.security.crypto.**
+-keep class androidx.biometric.** { *; }
+-dontwarn androidx.biometric.**
+
+# Shared Preferences
+-keep class androidx.preference.** { *; }
+-dontwarn androidx.preference.**
+
+# Local Notifications
+-keep class androidx.core.app.** { *; }
+-dontwarn androidx.core.app.**
+
+# Socket.io
+-keep class io.socket.** { *; }
+-dontwarn io.socket.**
+
 # Gson
 -keepattributes Signature
 -keepattributes *Annotation*

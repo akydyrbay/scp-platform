@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" android:required="false"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" android:required="false"/>
     
+    <!-- Android 13+ Permissions -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" android:required="false"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" android:required="false"/>
+    
     <application
         android:label="SCP Consumer"
         android:name="${applicationName}"
