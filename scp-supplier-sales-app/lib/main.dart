@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'generated/l10n/app_localizations.dart';
@@ -22,14 +23,40 @@ import 'screens/profile/profile_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize app configuration (environment, etc.)
-  AppConfig.initialize();
+  // Set up error handling
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    if (kDebugMode) {
+      print('Flutter Error: ${details.exception}');
+      print('Stack: ${details.stack}');
+    }
+  };
 
-  // Initialize storage service
-  final storageService = StorageService();
-  await storageService.init();
+  PlatformDispatcher.instance.onError = (error, stack) {
+    if (kDebugMode) {
+      print('Platform Error: $error');
+      print('Stack: $stack');
+    }
+    return true;
+  };
 
-  runApp(const SupplierSalesApp());
+  try {
+    // Initialize app configuration (environment, etc.)
+    AppConfig.initialize();
+
+    // Initialize storage service
+    final storageService = StorageService();
+    await storageService.init();
+
+    runApp(const SupplierSalesApp());
+  } catch (e, stackTrace) {
+    if (kDebugMode) {
+      print('Fatal Error during initialization: $e');
+      print('Stack trace: $stackTrace');
+    }
+    // Run app with error widget to show user-friendly message
+    runApp(const ErrorApp());
+  }
 }
 
 class SupplierSalesApp extends StatelessWidget {
@@ -77,6 +104,41 @@ class SupplierSalesApp extends StatelessWidget {
             }
             return const LoginScreen();
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// Error widget shown when app fails to initialize
+class ErrorApp extends StatelessWidget {
+  const ErrorApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'SCP Supplier Sales',
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.error_outline, size: 64, color: Colors.red),
+                SizedBox(height: 16),
+                Text(
+                  'App Initialization Error',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'The app encountered an error during startup. Please try again or contact support.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

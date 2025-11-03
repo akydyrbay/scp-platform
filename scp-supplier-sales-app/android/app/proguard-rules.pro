@@ -29,6 +29,21 @@
 
 # Keep model classes
 -keep class com.scp.supplier.** { *; }
+-keep class scp_mobile_shared.** { *; }
+-dontwarn scp_mobile_shared.**
+
+# Keep Flutter generated files (localization, etc.)
+-keep class **.generated.** { *; }
+-keep class **.generated.l10n.** { *; }
+
+# Keep attributes needed for JSON serialization
+-keepattributes EnclosingMethod
+-keepattributes InnerClasses
+
+# Keep data classes used for JSON
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
 
 # Keep native methods
 -keepclasseswithmembernames class * {
