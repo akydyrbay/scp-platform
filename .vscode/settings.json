@@ -7,19 +7,6 @@
   "explorer.confirmDragAndDrop": false,
   "go.toolsManagement.autoUpdate": true,
   "explorer.confirmDelete": false,
-  "java.configuration.runtimes": [
-    {
-      "name": "JavaSE-17",
-      "path": "/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home",
-      "default": true
-    },
-    {
-      "name": "JavaSE-22",
-      "path": "/Users/bake.72/Library/Java/JavaVirtualMachines/openjdk-22.0.2/Contents/Home"
-    }
-  ],
-  "java.jdt.ls.java.home": "/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home",
-  "gradle.nestedProjects": true,
-  "gradle.java.home": "/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home"
+  "gradle.nestedProjects": true
 }
 

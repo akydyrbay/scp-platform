@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 
+# Root Flutter project files (if any)
+#.metadata
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -60,3 +63,6 @@ supplier-keystore-base64.txt
 .env
 .env.local
 .env.*.local
+
+# Android local.properties (machine-specific paths)
+**/local.properties
