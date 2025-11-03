@@ -24,5 +24,6 @@ type OrderItem struct {
 	UnitPrice  float64 `json:"unit_price" db:"unit_price"`
 	Subtotal   float64 `json:"subtotal" db:"subtotal"`
 	Product    *Product `json:"product,omitempty"`
+	CreatedAt  time.Time `json:"created_at" db:"created_at"`
 }
 
