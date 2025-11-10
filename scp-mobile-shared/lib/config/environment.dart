@@ -1,5 +1,7 @@
 /// Environment configuration
 /// Supports: development, staging, production
+import 'package:flutter/foundation.dart';
+
 enum AppEnvironment {
   development,
   staging,
@@ -48,14 +50,20 @@ class EnvironmentConfig {
   static bool get isProduction => environment == AppEnvironment.production;
 
   /// Get API base URL based on environment
+  /// Priority: 1) API_BASE_URL dart-define 2) If running on web and host is localhost, use local backend 3) environment-based defaults
   static String get baseUrl {
-    const baseUrl = String.fromEnvironment(
-      'API_BASE_URL',
-      defaultValue: '',
-    );
+    const override = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+    if (override.isNotEmpty) return override;
 
-    if (baseUrl.isNotEmpty) {
-      return baseUrl;
+    // When running in the browser during local development, prefer a localhost backend
+    // to avoid CORS/network issues against the production API. Developers can still
+    // override with --dart-define=API_BASE_URL if needed.
+    if (kIsWeb) {
+      final host = Uri.base.host;
+      if (host == 'localhost' || host == '127.0.0.1') {
+        // default local backend port used by the backend in this repo is 3000
+        return 'http://localhost:3000/api/v1';
+      }
     }
 
     switch (environment) {

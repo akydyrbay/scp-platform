@@ -43,27 +43,70 @@ class AuthCubit extends Cubit<AuthState> {
     AuthService? authService,
   })  : _authService = authService ?? AuthService(),
         super(const AuthState()) {
+    // Don't block constructor - check auth status asynchronously after app starts
+    // This prevents app from being killed during startup (Android kills apps that take >3 seconds)
     _checkAuthStatus();
   }
 
   /// Check if user is already authenticated
+  /// This is non-blocking and won't cause app to be killed
   Future<void> _checkAuthStatus() async {
+    // Add small delay to let app start first
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    print('🔐 [AUTH] Checking authentication status...');
     emit(state.copyWith(isLoading: true));
     
     try {
-      final isAuthenticated = await _authService.isAuthenticated();
+      // Add timeout to prevent hanging if backend is unreachable
+      print('🔐 [AUTH] Checking if user is authenticated...');
+      final isAuthenticated = await _authService.isAuthenticated()
+          .timeout(
+            const Duration(seconds: 2),
+            onTimeout: () {
+              print('⏱️  [AUTH] Authentication check timeout - assuming not authenticated');
+              // If timeout, assume not authenticated to allow app to start
+              return false;
+            },
+          );
+      
+      print('🔐 [AUTH] Is authenticated: $isAuthenticated');
+      
       if (isAuthenticated) {
-        final user = await _authService.getCurrentUser();
+        print('👤 [AUTH] Loading user data...');
+        final user = await _authService.getCurrentUser()
+            .timeout(
+              const Duration(seconds: 1),
+              onTimeout: () {
+                print('⏱️  [AUTH] User data load timeout');
+                return null;
+              },
+            );
+        
+        if (user != null) {
+          print('✅ [AUTH] User authenticated: ${user.email}');
         emit(state.copyWith(
           isAuthenticated: true,
           user: user,
           isLoading: false,
         ));
       } else {
+          print('⚠️  [AUTH] User data not available');
+          emit(state.copyWith(isLoading: false));
+        }
+      } else {
+        print('ℹ️  [AUTH] User not authenticated - showing login screen');
         emit(state.copyWith(isLoading: false));
       }
-    } catch (e) {
-      emit(state.copyWith(isLoading: false));
+    } catch (e, stackTrace) {
+      print('═══════════════════════════════════════');
+      print('❌ [AUTH] ERROR CHECKING AUTH STATUS');
+      print('═══════════════════════════════════════');
+      print('Error: $e');
+      print('Stack: $stackTrace');
+      print('═══════════════════════════════════════');
+      // On any error, just show login screen - don't crash
+      emit(state.copyWith(isLoading: false, isAuthenticated: false));
     }
   }
 

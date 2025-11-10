@@ -40,22 +40,30 @@ class OrderModel extends Equatable {
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
+    final itemsRaw = json['items'];
+    final itemsList = (itemsRaw is List)
+        ? itemsRaw.map((e) => OrderItem.fromJson(e as Map<String, dynamic>)).toList()
+        : <OrderItem>[];
+
+    final orderNumber = (json['order_number'] as String?) ??
+        (json['id'] as String).substring(0, 8);
+    final supplierName = (json['supplier_name'] as String?) ?? 'Supplier';
+    final orderDateStr = (json['order_date'] as String?) ?? (json['created_at'] as String);
+
     return OrderModel(
       id: json['id'] as String,
-      orderNumber: json['order_number'] as String,
+      orderNumber: orderNumber,
       supplierId: json['supplier_id'] as String,
-      supplierName: json['supplier_name'] as String,
+      supplierName: supplierName,
       supplierLogoUrl: json['supplier_logo_url'] as String?,
-      items: (json['items'] as List<dynamic>)
-          .map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      items: itemsList,
       subtotal: (json['subtotal'] as num).toDouble(),
       tax: (json['tax'] as num).toDouble(),
       shippingFee: (json['shipping_fee'] as num).toDouble(),
       total: (json['total'] as num).toDouble(),
       status: _parseOrderStatus(json['status'] as String),
       notes: json['notes'] as String?,
-      orderDate: DateTime.parse(json['order_date'] as String),
+      orderDate: DateTime.parse(orderDateStr),
       estimatedDeliveryDate: json['estimated_delivery_date'] != null
           ? DateTime.parse(json['estimated_delivery_date'] as String)
           : null,

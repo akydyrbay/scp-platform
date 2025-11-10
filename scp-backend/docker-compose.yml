@@ -6,17 +6,30 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - PORT=3000
+      - ENV=development
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=scp_platform
+      - DB_SSLMODE=disable
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - ENV=development
+      - JWT_SECRET=dev-jwt-secret-key-change-in-production
+      - JWT_ACCESS_EXPIRY=15
+      - JWT_REFRESH_EXPIRY=7
+      - CORS_ORIGINS=*
+      - LOG_LEVEL=debug
+      - LOG_FORMAT=text
+      - STORAGE_TYPE=local
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      migrations:
+        condition: service_completed_successfully
     volumes:
       - ./uploads:/app/uploads
 
@@ -30,7 +43,29 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # One-shot migrations service: runs all SQL migrations (including seed) against the postgres DB
+  migrations:
+    image: postgres:15
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: postgres
+      POSTGRES_DB: scp_platform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: postgres
+    volumes:
+      - ./migrations:/migrations:ro
+      - ./scripts/run-migrations.sh:/scripts/run-migrations.sh:ro
+    entrypoint: ["/bin/sh", "/scripts/run-migrations.sh"]
+    restart: "no"
 
   redis:
     image: redis:7-alpine

@@ -31,16 +31,34 @@ class ConversationModelSales extends Equatable {
   });
 
   factory ConversationModelSales.fromJson(Map<String, dynamic> json) {
+    // Support both flattened and nested consumer fields from backend
+    final consumer = json['consumer'] as Map<String, dynamic>?;
+    final derivedConsumerId = consumer != null
+        ? consumer['id'] as String?
+        : json['consumer_id'] as String?;
+    final derivedConsumerName = json['consumer_name'] as String? ??
+        (consumer != null
+            ? (consumer['name'] as String? ??
+                consumer['company_name'] as String? ??
+                consumer['email'] as String? ??
+                'Consumer')
+            : 'Consumer');
+    final derivedCompanyName = json['consumer_company_name'] as String? ??
+        (consumer != null ? consumer['company_name'] as String? : null);
+    final derivedAvatar = json['consumer_avatar_url'] as String? ??
+        (consumer != null ? consumer['avatar_url'] as String? : null);
+
+    // Support alternative timestamp field names
+    final lastMsgAt = (json['last_message_time'] ?? json['last_message_at']) as String?;
+
     return ConversationModelSales(
-      id: json['id'] as String,
-      consumerId: json['consumer_id'] as String,
-      consumerName: json['consumer_name'] as String,
-      consumerCompanyName: json['consumer_company_name'] as String?,
-      consumerAvatarUrl: json['consumer_avatar_url'] as String?,
+      id: (json['id'] ?? json['conversation_id']) as String,
+      consumerId: derivedConsumerId ?? '',
+      consumerName: derivedConsumerName,
+      consumerCompanyName: derivedCompanyName,
+      consumerAvatarUrl: derivedAvatar,
       lastMessage: json['last_message'] as String?,
-      lastMessageTime: json['last_message_time'] != null
-          ? DateTime.parse(json['last_message_time'] as String)
-          : null,
+      lastMessageTime: lastMsgAt != null ? DateTime.parse(lastMsgAt) : null,
       unreadCount: json['unread_count'] as int? ?? 0,
       orderId: json['order_id'] as String?,
       orderNumber: json['order_number'] as String?,

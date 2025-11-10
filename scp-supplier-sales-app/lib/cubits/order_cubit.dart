@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:scp_mobile_shared/models/order_model.dart';
-import 'package:scp_mobile_shared/services/order_service.dart';
+import '../services/supplier_order_service.dart';
 
 /// Order State
 class OrderState extends Equatable {
@@ -47,10 +47,10 @@ class OrderState extends Equatable {
 
 /// Order Cubit
 class OrderCubit extends Cubit<OrderState> {
-  final OrderService _orderService;
+  final SupplierOrderService _orderService;
 
-  OrderCubit({OrderService? orderService})
-      : _orderService = orderService ?? OrderService(),
+  OrderCubit({SupplierOrderService? orderService})
+      : _orderService = orderService ?? SupplierOrderService(),
         super(const OrderState());
 
   /// Load order history
@@ -58,7 +58,7 @@ class OrderCubit extends Cubit<OrderState> {
     emit(state.copyWith(isLoading: true, error: null));
 
     try {
-      final orders = await _orderService.getOrderHistory();
+      final orders = await _orderService.getOrders();
       emit(state.copyWith(
         orders: orders,
         isLoading: false,
@@ -76,7 +76,12 @@ class OrderCubit extends Cubit<OrderState> {
     emit(state.copyWith(isLoading: true, error: null));
 
     try {
-      final currentOrders = await _orderService.getCurrentOrders();
+      final allOrders = await _orderService.getOrders();
+      final currentOrders = allOrders.where((o) =>
+        o.status == OrderStatus.pending ||
+        o.status == OrderStatus.confirmed ||
+        o.status == OrderStatus.processing
+      ).toList();
       emit(state.copyWith(
         currentOrders: currentOrders,
         isLoading: false,

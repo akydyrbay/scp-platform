@@ -4,7 +4,7 @@ import 'package:scp_mobile_shared/models/notification_model.dart';
 import 'package:scp_mobile_shared/services/notification_service.dart';
 import 'package:scp_mobile_shared/services/chat_service_sales.dart';
 import 'package:scp_mobile_shared/models/conversation_model.dart';
-import 'package:scp_mobile_shared/services/order_service.dart';
+import '../services/supplier_order_service.dart';
 import 'package:scp_mobile_shared/models/order_model.dart';
 
 /// Dashboard State
@@ -62,15 +62,15 @@ class DashboardState extends Equatable {
 /// Dashboard Cubit
 class DashboardCubit extends Cubit<DashboardState> {
   final ChatServiceSales _chatService;
-  final OrderService _orderService;
+  final SupplierOrderService _orderService;
   final NotificationService _notificationService;
 
   DashboardCubit({
     ChatServiceSales? chatService,
-    OrderService? orderService,
+    SupplierOrderService? orderService,
     NotificationService? notificationService,
   })  : _chatService = chatService ?? ChatServiceSales(),
-        _orderService = orderService ?? OrderService(),
+        _orderService = orderService ?? SupplierOrderService(),
         _notificationService = notificationService ?? NotificationService(),
         super(const DashboardState());
 
@@ -81,7 +81,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     try {
       // Load conversations, recent orders, and notifications in parallel
       final conversations = await _chatService.getConversations();
-      final recentOrders = await _orderService.getOrderHistory(pageSize: 5);
+      final recentOrders = await _orderService.getOrders(pageSize: 5);
       final notifications = await _notificationService.getNotifications(unreadOnly: true);
 
       // Calculate unread counts

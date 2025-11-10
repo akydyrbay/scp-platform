@@ -21,20 +21,35 @@ class HttpService {
       ),
     );
 
-    // Add interceptors for authentication
+    // Add interceptors for authentication and logging
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // Log request for debugging
+          print('🌐 [HTTP] ${options.method} ${options.uri}');
+          
           // Add auth token to requests
           final token = await _storageService.getAuthToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
+            print('🔐 [HTTP] Auth token added to request');
+          } else {
+            print('ℹ️  [HTTP] No auth token - unauthenticated request');
           }
           return handler.next(options);
         },
+        onResponse: (response, handler) {
+          // Log successful responses
+          print('✅ [HTTP] ${response.requestOptions.method} ${response.requestOptions.uri} - Status: ${response.statusCode}');
+          return handler.next(response);
+        },
         onError: (DioException error, handler) async {
+          // Log error before handling
+          print('❌ [HTTP] ${error.requestOptions.method} ${error.requestOptions.uri} - Error: ${error.type}');
+          
           // Handle 401 unauthorized - logout user
           if (error.response?.statusCode == 401) {
+            print('🔐 [HTTP] 401 Unauthorized - clearing auth token');
             await _storageService.clearAuthToken();
             // Navigate to login if needed
           }
@@ -148,16 +163,36 @@ class HttpService {
 
   // Handle errors
   String _handleError(DioException error) {
+    // Log error for debugging
+    print('═══════════════════════════════════════');
+    print('❌ [HTTP] ERROR');
+    print('═══════════════════════════════════════');
+    print('URL: ${error.requestOptions.uri}');
+    print('Method: ${error.requestOptions.method}');
+    print('Error Type: ${error.type}');
+    print('Message: ${error.message}');
+    
     if (error.response != null) {
+      print('Status Code: ${error.response?.statusCode}');
+      print('Response Data: ${error.response?.data}');
       // Server responded with error
-      return error.response?.data['message'] ??
+      final message = error.response?.data['message'] ??
           'An error occurred: ${error.response?.statusCode}';
+      print('Error Message: $message');
+      print('═══════════════════════════════════════');
+      return message;
     } else if (error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout) {
+      print('Error: Connection timeout');
+      print('═══════════════════════════════════════');
       return 'Connection timeout. Please try again.';
     } else if (error.type == DioExceptionType.unknown) {
+      print('Error: Unknown (likely network issue)');
+      print('═══════════════════════════════════════');
       return 'No internet connection. Please check your network.';
     } else {
+      print('Error: Unexpected error');
+      print('═══════════════════════════════════════');
       return 'An unexpected error occurred. Please try again.';
     }
   }

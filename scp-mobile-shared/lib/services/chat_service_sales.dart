@@ -14,7 +14,14 @@ class ChatServiceSales {
   Future<List<ConversationModelSales>> getConversations() async {
     try {
       final response = await _httpService.get('/supplier/conversations');
-      final List<dynamic> data = response.data['results'] as List<dynamic>;
+      final dynamic payload = response.data;
+      final dynamic list =
+          (payload is Map && payload['results'] is List) ? payload['results']
+          : (payload is Map && payload['data'] is List) ? payload['data']
+          : (payload is List) ? payload
+          : <dynamic>[];
+
+      final List<dynamic> data = list as List<dynamic>;
       return data
           .map((e) => ConversationModelSales.fromJson(e as Map<String, dynamic>))
           .toList();
