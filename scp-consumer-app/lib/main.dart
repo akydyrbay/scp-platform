@@ -27,37 +27,73 @@ import 'screens/supplier/supplier_discovery_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Set up error handling
+  // Enhanced error handling with logging
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
-    if (kDebugMode) {
-      print('Flutter Error: ${details.exception}');
+    // Always log errors, even in release mode (for debugging)
+    print('═══════════════════════════════════════');
+    print('❌ FLUTTER ERROR');
+    print('═══════════════════════════════════════');
+    print('Exception: ${details.exception}');
+    print('Library: ${details.library}');
+    print('Context: ${details.context}');
+    if (details.stack != null) {
       print('Stack: ${details.stack}');
     }
+    print('═══════════════════════════════════════');
   };
 
   PlatformDispatcher.instance.onError = (error, stack) {
-    if (kDebugMode) {
-      print('Platform Error: $error');
-      print('Stack: $stack');
-    }
+    print('═══════════════════════════════════════');
+    print('❌ PLATFORM ERROR');
+    print('═══════════════════════════════════════');
+    print('Error: $error');
+    print('Stack: $stack');
+    print('═══════════════════════════════════════');
     return true;
   };
 
+  // Enhanced startup logging
+  print('🚀 [APP] Starting SCP Consumer App...');
+  print('📱 [APP] Flutter binding initialized');
+
   try {
-    // Initialize app configuration (environment, etc.)
+    // Initialize app configuration (environment, etc.) - this is fast
+    print('⚙️  [APP] Initializing AppConfig...');
     AppConfig.initialize();
+    print('✅ [APP] AppConfig initialized');
+    print('🌐 [APP] API Base URL: ${AppConfig.baseUrl}');
+    print('🔧 [APP] Environment: ${AppConfig.environment}');
 
-    // Initialize storage service
+    // Initialize storage service with timeout to prevent blocking
+    // If storage init fails, app can still start
+    print('💾 [APP] Initializing storage service...');
+    try {
     final storageService = StorageService();
-    await storageService.init();
-
-    runApp(const SCPConsumerApp());
-  } catch (e, stackTrace) {
-    if (kDebugMode) {
-      print('Fatal Error during initialization: $e');
-      print('Stack trace: $stackTrace');
+      await storageService.init().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () {
+          print('⚠️  [APP] Storage initialization timeout - continuing anyway');
+        },
+      );
+      print('✅ [APP] Storage service initialized');
+    } catch (e) {
+      print('⚠️  [APP] Storage initialization error (non-fatal): $e');
+      // Continue anyway - storage might work later
     }
+
+    // Start app immediately - don't wait for anything else
+    // This prevents Android from killing the app (3 second timeout)
+    print('🎨 [APP] Starting Flutter app widget tree...');
+    runApp(const SCPConsumerApp());
+    print('✅ [APP] Flutter app started successfully');
+  } catch (e, stackTrace) {
+    print('═══════════════════════════════════════');
+    print('❌ [APP] FATAL ERROR DURING INITIALIZATION');
+    print('═══════════════════════════════════════');
+    print('Error: $e');
+      print('Stack trace: $stackTrace');
+    print('═══════════════════════════════════════');
     // Run app with error widget to show user-friendly message
     runApp(const ErrorApp());
   }
@@ -112,6 +148,15 @@ class SCPConsumerApp extends StatelessWidget {
         
         home: BlocBuilder<AuthCubit, AuthState>(
           builder: (context, state) {
+            // Show loading screen while checking auth status
+            if (state.isLoading) {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+            
             if (state.isAuthenticated) {
               return const MainScreen();
             }
