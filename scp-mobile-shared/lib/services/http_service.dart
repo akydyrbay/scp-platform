@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import '../config/app_config.dart';
@@ -7,6 +8,8 @@ import '../services/storage_service.dart';
 class HttpService {
   late final Dio _dio;
   final StorageService _storageService = StorageService();
+  bool _isRefreshing = false;
+  final List<_PendingRequest> _pendingRequests = [];
 
   HttpService() {
     _dio = Dio(
@@ -47,16 +50,137 @@ class HttpService {
           // Log error before handling
           print('❌ [HTTP] ${error.requestOptions.method} ${error.requestOptions.uri} - Error: ${error.type}');
           
-          // Handle 401 unauthorized - logout user
+          // Handle 401 unauthorized - try to refresh token
           if (error.response?.statusCode == 401) {
-            print('🔐 [HTTP] 401 Unauthorized - clearing auth token');
-            await _storageService.clearAuthToken();
-            // Navigate to login if needed
+            final requestPath = error.requestOptions.path;
+            
+            // Don't retry refresh endpoint if it fails
+            if (requestPath.contains('/auth/refresh')) {
+              print('🔐 [HTTP] Refresh token failed - clearing auth tokens');
+              await _storageService.clearAuthToken();
+              _isRefreshing = false;
+              _rejectPendingRequests(error);
+              return handler.next(error);
+            }
+            
+            // Try to refresh token
+            if (!_isRefreshing) {
+              _isRefreshing = true;
+              print('🔄 [HTTP] Attempting to refresh token...');
+              
+              try {
+                final refreshToken = await _storageService.getRefreshToken();
+                if (refreshToken == null) {
+                  print('⚠️  [HTTP] No refresh token available - clearing auth tokens');
+                  await _storageService.clearAuthToken();
+                  _isRefreshing = false;
+                  _rejectPendingRequests(error);
+                  return handler.next(error);
+                }
+                
+                // Call refresh endpoint (without auth token since it's public)
+                final refreshDio = Dio(
+                  BaseOptions(
+                    baseUrl: AppConfig.baseUrl,
+                    connectTimeout: AppConfig.connectTimeout,
+                    receiveTimeout: AppConfig.receiveTimeout,
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Accept': 'application/json',
+                    },
+                  ),
+                );
+                final refreshResponse = await refreshDio.post(
+                  '/auth/refresh',
+                  data: {'refresh_token': refreshToken},
+                );
+                
+                final newAccessToken = refreshResponse.data['access_token'] as String;
+                await _storageService.saveAuthToken(newAccessToken);
+                print('✅ [HTTP] Token refreshed successfully');
+                
+                // Retry all pending requests with new token
+                _isRefreshing = false;
+                await _retryPendingRequests();
+                
+                // Retry the current request
+                final opts = error.requestOptions;
+                opts.headers['Authorization'] = 'Bearer $newAccessToken';
+                final response = await _dio.request(
+                  opts.path,
+                  options: Options(
+                    method: opts.method,
+                    headers: opts.headers,
+                  ),
+                  data: opts.data,
+                  queryParameters: opts.queryParameters,
+                );
+                return handler.resolve(response);
+              } catch (e) {
+                print('❌ [HTTP] Token refresh failed: $e');
+                await _storageService.clearAuthToken();
+                _isRefreshing = false;
+                _rejectPendingRequests(error);
+                return handler.next(error);
+              }
+            } else {
+              // Already refreshing, queue this request
+              print('⏳ [HTTP] Token refresh in progress - queueing request');
+              final completer = Completer<Response>();
+              _pendingRequests.add(_PendingRequest(
+                requestOptions: error.requestOptions,
+                completer: completer,
+              ));
+              
+              try {
+                final response = await completer.future;
+                return handler.resolve(response);
+              } catch (e) {
+                return handler.next(error);
+              }
+            }
           }
+          
           return handler.next(error);
         },
       ),
     );
+  }
+  
+  Future<void> _retryPendingRequests() async {
+    final newToken = await _storageService.getAuthToken();
+    if (newToken == null) return;
+    
+    final requests = List<_PendingRequest>.from(_pendingRequests);
+    _pendingRequests.clear();
+    
+    for (final pending in requests) {
+      try {
+        final opts = pending.requestOptions;
+        opts.headers['Authorization'] = 'Bearer $newToken';
+        final response = await _dio.request(
+          opts.path,
+          options: Options(
+            method: opts.method,
+            headers: opts.headers,
+          ),
+          data: opts.data,
+          queryParameters: opts.queryParameters,
+        );
+        pending.completer.complete(response);
+      } catch (e) {
+        pending.completer.completeError(e);
+      }
+    }
+  }
+  
+  void _rejectPendingRequests(DioException error) {
+    final requests = List<_PendingRequest>.from(_pendingRequests);
+    _pendingRequests.clear();
+    
+    for (final pending in requests) {
+      pending.completer.completeError(error);
+    }
   }
 
   // GET request
@@ -196,5 +320,16 @@ class HttpService {
       return 'An unexpected error occurred. Please try again.';
     }
   }
+}
+
+/// Helper class for pending requests during token refresh
+class _PendingRequest {
+  final RequestOptions requestOptions;
+  final Completer<Response> completer;
+  
+  _PendingRequest({
+    required this.requestOptions,
+    required this.completer,
+  });
 }
 

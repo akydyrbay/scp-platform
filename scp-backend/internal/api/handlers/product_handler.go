@@ -35,14 +35,20 @@ func (h *ProductHandler) GetConsumerProducts(c *gin.Context) {
 	consumerID := c.GetString("user_id")
 	supplierID := c.Query("supplier_id")
 	
-	if supplierID == "" {
-		c.JSON(http.StatusBadRequest, ErrorResponse("supplier_id is required"))
-		return
-	}
-
 	page, pageSize := ParsePagination(c)
 
-	products, total, err := h.productRepo.GetBySupplierAndConsumer(supplierID, consumerID, page, pageSize)
+	var products []models.Product
+	var total int
+	var err error
+
+	// If supplier_id is provided, get products from that specific supplier
+	// Otherwise, get products from all approved linked suppliers
+	if supplierID != "" {
+		products, total, err = h.productRepo.GetBySupplierAndConsumer(supplierID, consumerID, page, pageSize)
+	} else {
+		products, total, err = h.productRepo.GetAllByConsumer(consumerID, page, pageSize)
+	}
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse(err.Error()))
 		return

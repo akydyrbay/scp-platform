@@ -13,6 +13,7 @@ type Product struct {
 	StockLevel      int        `json:"stock_level" db:"stock_level"`
 	MinOrderQuantity int       `json:"min_order_quantity" db:"min_order_quantity"`
 	SupplierID      string     `json:"supplier_id" db:"supplier_id"`
+	SupplierName    *string    `json:"supplier_name,omitempty" db:"supplier_name"`
 	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt       *time.Time `json:"updated_at" db:"updated_at"`
 }

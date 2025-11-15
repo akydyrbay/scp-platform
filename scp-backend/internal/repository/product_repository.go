@@ -19,7 +19,12 @@ func NewProductRepository(db *sqlx.DB) *ProductRepository {
 
 func (r *ProductRepository) GetByID(id string) (*models.Product, error) {
 	var product models.Product
-	err := r.db.Get(&product, "SELECT * FROM products WHERE id = $1", id)
+	err := r.db.Get(&product, `
+		SELECT p.*, s.name as supplier_name 
+		FROM products p
+		LEFT JOIN suppliers s ON p.supplier_id = s.id
+		WHERE p.id = $1
+	`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -62,13 +67,42 @@ func (r *ProductRepository) GetBySupplierAndConsumer(supplierID, consumerID stri
 
 	offset := (page - 1) * pageSize
 	selectQuery := `
-		SELECT p.* FROM products p
+		SELECT p.*, s.name as supplier_name FROM products p
 		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
+		INNER JOIN suppliers s ON p.supplier_id = s.id
 		WHERE p.supplier_id = $1 AND cl.consumer_id = $2 AND cl.status = 'approved'
 		ORDER BY p.created_at DESC
 		LIMIT $3 OFFSET $4
 	`
 	err = r.db.Select(&products, selectQuery, supplierID, consumerID, pageSize, offset)
+	return products, total, err
+}
+
+func (r *ProductRepository) GetAllByConsumer(consumerID string, page, pageSize int) ([]models.Product, int, error) {
+	var products []models.Product
+	var total int
+
+	// Get products from all approved linked suppliers for the consumer
+	countQuery := `
+		SELECT COUNT(*) FROM products p
+		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
+		WHERE cl.consumer_id = $1 AND cl.status = 'approved'
+	`
+	err := r.db.Get(&total, countQuery, consumerID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * pageSize
+	selectQuery := `
+		SELECT p.*, s.name as supplier_name FROM products p
+		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
+		INNER JOIN suppliers s ON p.supplier_id = s.id
+		WHERE cl.consumer_id = $1 AND cl.status = 'approved'
+		ORDER BY p.created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+	err = r.db.Select(&products, selectQuery, consumerID, pageSize, offset)
 	return products, total, err
 }
 

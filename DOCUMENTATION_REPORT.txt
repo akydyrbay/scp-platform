@@ -1,0 +1,620 @@
+================================================================================
+SCP PLATFORM - GUI DEVELOPMENT AND BACKEND INTEGRATION
+DOCUMENTATION REPORT
+================================================================================
+
+1. GUI DESIGN
+================================================================================
+
+Q1.1: What are the main screens of your system, and what are their purposes?
+
+ANSWER:
+The SCP Platform consists of three main applications, each with distinct screens:
+
+A. CONSUMER MOBILE APP (Flutter)
+   - Login Screen: User authentication for consumers (restaurants, hotels)
+   - Home Screen: Displays products from linked suppliers, quick access to orders
+   - Supplier Discovery Screen: Browse and search for suppliers, send link requests
+   - Orders Screen: View order history, current orders, and order tracking
+   - Chat List Screen: List of conversations with suppliers
+   - Chat Message Screen: Real-time messaging interface with suppliers
+   - Profile Screen: User profile management and settings
+
+B. SUPPLIER SALES MOBILE APP (Flutter)
+   - Login Screen: Authentication for sales representatives
+   - Dashboard Screen: Live statistics (unread messages, new orders), recent conversations and orders
+   - Chat List Screen: Conversations with consumers, canned replies support
+   - Chat Message Screen: Enhanced messaging with complaint logging
+   - Orders Screen: View supplier orders (read-only)
+   - Profile Screen: Sales rep profile and settings
+
+C. SUPPLIER WEB PORTAL (Next.js)
+   - Login Screen: Authentication for owners and managers
+   - Dashboard Screen: Key metrics, charts, and analytics
+   - Users Screen: User management (create/delete Manager and Sales Rep accounts) - Owner only
+   - Catalog Screen: Product catalog and inventory management (CRUD operations)
+   - Consumers Screen: Consumer link management (approve/reject/block requests)
+   - Orders Screen: Order management (accept/reject orders)
+   - Incidents Screen: View and resolve complaints
+
+Q1.2: How did you ensure user-friendliness and accessibility?
+
+ANSWER:
+1. Intuitive Navigation:
+   - Bottom navigation bars in mobile apps for easy access to main sections
+   - Consistent iconography and labeling across all screens
+   - Clear visual hierarchy with proper spacing and typography
+
+2. Responsive Design:
+   - Mobile apps optimized for various screen sizes
+   - Web portal responsive for desktop and tablet views
+   - Adaptive layouts that work on different devices
+
+3. User Feedback:
+   - Loading indicators during API calls
+   - Error messages with retry options
+   - Success confirmations for actions
+   - Empty states with helpful messages
+
+4. Accessibility Features:
+   - Semantic labels for screen readers
+   - High contrast color schemes (Blue for consumer, Purple for supplier)
+   - Touch targets meet minimum size requirements (48x48dp)
+   - Multi-language support (English, Russian, Kazakh)
+
+5. Consistency:
+   - Shared design system across all applications
+   - Consistent button styles, colors, and spacing
+   - Uniform error handling and display patterns
+
+================================================================================
+2. DATABASE CONNECTIVITY
+================================================================================
+
+Q2.1: Which database system did you use?
+
+ANSWER:
+PostgreSQL 15+ was used as the primary database system. The system also uses Redis for optional caching and session management.
+
+Q2.2: Explain how you established the connection between GUI and backend.
+
+ANSWER:
+The connection follows a layered architecture:
+
+1. Frontend Layer (GUI):
+   - Flutter apps use HTTP service (Dio) to make REST API calls
+   - Next.js web portal uses fetch/axios for API requests
+   - All requests include JWT token in Authorization header
+
+2. Backend API Layer:
+   - Go backend with Gin framework handles HTTP requests
+   - Middleware validates JWT tokens and extracts user context
+   - Handlers process requests and call service layer
+
+3. Service Layer:
+   - Business logic is implemented in service layer
+   - Services validate data and call repository layer
+
+4. Repository Layer:
+   - SQLX library for database operations
+   - Prepared statements for SQL queries
+   - Connection pooling for performance
+
+5. Database Layer:
+   - PostgreSQL database stores all persistent data
+   - Migrations manage schema changes
+   - Foreign key constraints ensure data integrity
+
+Connection Flow:
+GUI → HTTP Request (with JWT) → Backend API → Service → Repository → PostgreSQL
+
+Q2.3: Show one working query example (insert, update, or retrieve data).
+
+ANSWER:
+
+EXAMPLE 1: INSERT - Creating a new order
+Backend Code (Go):
+```go
+// Repository: order_repository.go
+func (r *OrderRepository) Create(order *models.Order) error {
+    tx, err := r.db.Beginx()
+    if err != nil {
+        return err
+    }
+    defer tx.Rollback()
+
+    order.ID = uuid.New().String()
+    order.CreatedAt = time.Now()
+    order.Status = "pending"
+
+    _, err = tx.NamedExec(`
+        INSERT INTO orders (id, consumer_id, supplier_id, status, subtotal, tax, shipping_fee, total, created_at)
+        VALUES (:id, :consumer_id, :supplier_id, :status, :subtotal, :tax, :shipping_fee, :total, :created_at)
+    `, order)
+    if err != nil {
+        return err
+    }
+
+    for _, item := range order.Items {
+        item.ID = uuid.New().String()
+        item.OrderID = order.ID
+        item.CreatedAt = time.Now()
+        _, err = tx.NamedExec(`
+            INSERT INTO order_items (id, order_id, product_id, quantity, unit_price, subtotal, created_at)
+            VALUES (:id, :order_id, :product_id, :quantity, :unit_price, :subtotal, :created_at)
+        `, item)
+        if err != nil {
+            return err
+        }
+    }
+
+    return tx.Commit()
+}
+```
+
+Frontend Code (Flutter):
+```dart
+// OrderService: order_service.dart
+Future<OrderModel> placeOrder({
+  required String supplierId,
+  required List<Map<String, dynamic>> items,
+  ShippingAddress? shippingAddress,
+  String? notes,
+}) async {
+  final response = await _httpService.post(
+    '/consumer/orders',
+    data: {
+      'supplier_id': supplierId,
+      'items': items,
+      if (shippingAddress != null) 'shipping_address': shippingAddress.toJson(),
+      if (notes != null) 'notes': notes,
+    },
+  );
+  return OrderModel.fromJson(response.data as Map<String, dynamic>);
+}
+```
+
+EXAMPLE 2: RETRIEVE - Getting supplier orders
+Backend Code:
+```go
+// Repository: order_repository.go
+func (r *OrderRepository) GetBySupplierID(supplierID string, page, pageSize int) ([]models.Order, int, error) {
+    var orders []models.Order
+    var total int
+
+    err := r.db.Get(&total, "SELECT COUNT(*) FROM orders WHERE supplier_id = $1", supplierID)
+    if err != nil {
+        return nil, 0, err
+    }
+
+    offset := (page - 1) * pageSize
+    err = r.db.Select(&orders, `
+        SELECT * FROM orders 
+        WHERE supplier_id = $1 
+        ORDER BY created_at DESC 
+        LIMIT $2 OFFSET $3
+    `, supplierID, pageSize, offset)
+    if err != nil {
+        return nil, 0, err
+    }
+
+    for i := range orders {
+        items, _ := r.getOrderItems(orders[i].ID)
+        orders[i].Items = items
+    }
+
+    return orders, total, nil
+}
+```
+
+Frontend Code:
+```dart
+// SupplierOrderService: supplier_order_service.dart
+Future<List<OrderModel>> getOrders({
+  int page = 1,
+  int pageSize = 20,
+}) async {
+  final response = await _httpService.get(
+    '/supplier/orders',
+    queryParameters: {'page': page, 'page_size': pageSize},
+  );
+  final List<dynamic> data = response.data['results'] as List<dynamic>;
+  return data.map((e) => OrderModel.fromJson(e as Map<String, dynamic>)).toList();
+}
+```
+
+EXAMPLE 3: UPDATE - Accepting an order
+Backend Code:
+```go
+// Service: order_service.go
+func (s *OrderService) AcceptOrder(orderID, supplierID string) error {
+    order, err := s.orderRepo.GetByID(orderID)
+    if err != nil {
+        return errors.New("order not found")
+    }
+
+    if order.SupplierID != supplierID {
+        return errors.New("unauthorized")
+    }
+
+    if order.Status != "pending" {
+        return errors.New("order cannot be accepted")
+    }
+
+    // Validate stock availability
+    for _, item := range order.Items {
+        product, err := s.productRepo.GetByID(item.ProductID)
+        if err != nil {
+            return errors.New("product not found")
+        }
+        if product.StockLevel < item.Quantity {
+            return errors.New("insufficient stock")
+        }
+        // Update stock
+        product.StockLevel -= item.Quantity
+        if err := s.productRepo.Update(product); err != nil {
+            return err
+        }
+    }
+
+    order.Status = "confirmed"
+    return s.orderRepo.Update(order)
+}
+```
+
+================================================================================
+3. FUNCTIONAL IMPLEMENTATION
+================================================================================
+
+Q3.1: Which modules are fully functional at this stage?
+
+ANSWER:
+All core modules are fully functional:
+
+1. AUTHENTICATION MODULE
+   - Login with JWT token generation
+   - Token refresh mechanism
+   - Role-based access control (consumer, owner, manager, sales_rep)
+   - Logout functionality
+   Status: ✅ Fully Functional
+
+2. PRODUCT MANAGEMENT MODULE
+   - Create, Read, Update, Delete products (Supplier web portal)
+   - Product catalog browsing (Consumer app)
+   - Inventory tracking and stock management
+   - Product search and filtering
+   Status: ✅ Fully Functional
+
+3. ORDER MANAGEMENT MODULE
+   - Create orders with multiple items (Consumer app)
+   - View order history and current orders
+   - Accept/reject orders (Supplier web portal)
+   - Order tracking and status updates
+   - Stock validation on order acceptance
+   Status: ✅ Fully Functional
+
+4. CONSUMER-SUPPLIER LINKING MODULE
+   - Supplier discovery and search
+   - Link request submission
+   - Approve/reject/block links (Supplier web portal)
+   - View linked suppliers and link status
+   Status: ✅ Fully Functional
+
+5. CHAT/MESSAGING MODULE
+   - Real-time conversations between consumers and suppliers
+   - Send/receive text messages
+   - Message read status tracking
+   - Canned replies for sales reps
+   - WebSocket support for real-time updates
+   Status: ✅ Fully Functional
+
+6. COMPLAINT SYSTEM MODULE
+   - Create complaints (Sales rep app)
+   - Escalate complaints to managers
+   - View and resolve complaints (Supplier web portal)
+   - Complaint status tracking
+   Status: ✅ Fully Functional
+
+7. USER MANAGEMENT MODULE
+   - Create users (Owner/Manager only)
+   - List users by supplier
+   - Delete users (Owner only)
+   - Role-based user creation
+   Status: ✅ Fully Functional
+
+8. DASHBOARD MODULE
+   - Statistics and metrics (Supplier web portal)
+   - Recent orders and conversations (Sales rep app)
+   - Unread message counts
+   - New order notifications
+   Status: ✅ Fully Functional
+
+9. NOTIFICATION MODULE
+   - In-app notifications
+   - Notification read status
+   - Real-time notification updates
+   Status: ✅ Fully Functional
+
+Q3.2: Demonstrate one real-time working operation (e.g., adding a record or displaying data).
+
+ANSWER:
+
+OPERATION: Creating a new product through Supplier Web Portal
+
+Step-by-Step Flow:
+
+1. User Action:
+   - Supplier owner logs into web portal
+   - Navigates to Catalog screen
+   - Clicks "Add Product" button
+
+2. Frontend (Next.js):
+   ```typescript
+   // components/catalog/product-form.tsx
+   const handleSubmit = async (data: ProductFormData) => {
+     try {
+       const response = await fetch('/api/v1/supplier/products', {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${token}`,
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify({
+           name: data.name,
+           description: data.description,
+           price: data.price,
+           unit: data.unit,
+           stock_level: data.stockLevel,
+           min_order_quantity: data.minOrderQty,
+         }),
+       });
+       const product = await response.json();
+       // Update UI with new product
+     } catch (error) {
+       // Handle error
+     }
+   };
+   ```
+
+3. Backend API (Go):
+   ```go
+   // Handler: product_handler.go
+   func (h *ProductHandler) CreateProduct(c *gin.Context) {
+       supplierID := c.GetString("supplier_id")
+       
+       var req struct {
+           Name            string  `json:"name" binding:"required"`
+           Description     string  `json:"description"`
+           Price           float64 `json:"price" binding:"required,gt=0"`
+           Unit            string  `json:"unit" binding:"required"`
+           StockLevel      int     `json:"stock_level" binding:"gte=0"`
+           MinOrderQty     int     `json:"min_order_quantity" binding:"gte=1"`
+       }
+       
+       if err := c.ShouldBindJSON(&req); err != nil {
+           c.JSON(http.StatusBadRequest, ErrorResponse(err.Error()))
+           return
+       }
+       
+       product := &models.Product{
+           SupplierID:      supplierID,
+           Name:            req.Name,
+           Description:     req.Description,
+           Price:           req.Price,
+           Unit:            req.Unit,
+           StockLevel:      req.StockLevel,
+           MinOrderQuantity: req.MinOrderQty,
+       }
+       
+       if err := h.productRepo.Create(product); err != nil {
+           c.JSON(http.StatusInternalServerError, ErrorResponse(err.Error()))
+           return
+       }
+       
+       c.JSON(http.StatusCreated, product)
+   }
+   ```
+
+4. Database Operation:
+   ```sql
+   INSERT INTO products (id, supplier_id, name, description, price, unit, stock_level, min_order_quantity, created_at)
+   VALUES (gen_random_uuid(), 'supplier-uuid', 'Product Name', 'Description', 9.99, 'piece', 100, 1, NOW());
+   ```
+
+5. Result:
+   - Product is created in database
+   - Success response returned to frontend
+   - UI updates to show new product in catalog
+   - Product immediately available for consumers to view
+
+Real-time Display Example:
+- When a consumer views products, the newly created product appears immediately
+- Stock levels update in real-time when orders are placed
+- Order status changes reflect immediately in both consumer and supplier apps
+
+================================================================================
+4. TESTING AND VALIDATION
+================================================================================
+
+Q4.1: How did you test the system for correctness and error handling?
+
+ANSWER:
+
+1. Unit Testing:
+   - Backend: Go test framework for service and repository layers
+   - Frontend: Flutter test framework for cubits and services
+   - Test coverage for critical business logic
+
+2. Integration Testing:
+   - API endpoint testing with various scenarios
+   - Database transaction testing
+   - Authentication and authorization testing
+
+3. Error Handling Testing:
+   - Invalid input validation
+   - Network error handling
+   - Database connection failures
+   - Unauthorized access attempts
+   - Missing data scenarios
+
+4. Manual Testing:
+   - End-to-end user workflows
+   - Cross-platform testing (iOS, Android, Web)
+   - Multi-user concurrent testing
+   - Performance testing under load
+
+Q4.2: What common errors did you encounter and how did you fix them?
+
+ANSWER:
+
+1. CORS Errors:
+   Problem: Flutter web apps couldn't connect to backend API
+   Solution: Configured CORS middleware to allow all origins in development
+   Fix: Updated docker-compose.yml with CORS_ORIGINS=*
+
+2. Null Type Errors:
+   Problem: Backend returning null values causing type errors in Flutter
+   Solution: Added null-safe parsing in model classes
+   Fix: Updated OrderModel and ConversationModel to handle null values gracefully
+
+3. Authentication Errors:
+   Problem: 401 Unauthorized errors due to role mismatch
+   Solution: Ensured correct role is sent during login
+   Fix: Updated login screens to send appropriate role (consumer, sales_rep)
+
+4. Database Connection Errors:
+   Problem: Migrations not running automatically
+   Solution: Created dedicated migrations service in docker-compose
+   Fix: Added migrations service that waits for postgres health check
+
+5. Response Format Mismatch:
+   Problem: Backend returning SuccessResponse format but frontend expecting direct data
+   Solution: Updated frontend services to parse both response formats
+   Fix: Added flexible parsing in ChatServiceSales and OrderService
+
+TEST CASE TABLE:
+
+| Test Case ID | Test Case Description | Input Data | Expected Output | Actual Output | Status |
+|--------------|----------------------|------------|-----------------|---------------|--------|
+| TC001 | Consumer Login | Email: consumer@example.com, Password: password123, Role: consumer | Success: Access token returned, User data displayed | Success: Token received, User authenticated | ✅ PASS |
+| TC002 | Create Product | Name: "Test Product", Price: 10.99, Stock: 50, Supplier ID: valid | Success: Product created with ID, Status 201 | Success: Product created, ID generated | ✅ PASS |
+| TC003 | Place Order | Supplier ID: valid, Items: [{product_id, quantity: 2}], Consumer: authenticated | Success: Order created, Status: pending, Items saved | Success: Order created, Items linked correctly | ✅ PASS |
+| TC004 | Accept Order | Order ID: valid, Supplier ID: matches order, Stock: sufficient | Success: Order status: confirmed, Stock reduced, Status 200 | Success: Order accepted, Stock updated | ✅ PASS |
+
+================================================================================
+5. FUTURE WORK
+================================================================================
+
+Q5.1: What additional modules or enhancements would you implement if you had more time?
+
+ANSWER:
+
+1. PAYMENT INTEGRATION MODULE
+   - Integration with payment gateways (Stripe, PayPal)
+   - Invoice generation and management
+   - Payment history tracking
+   - Refund processing
+
+2. ADVANCED ANALYTICS MODULE
+   - Sales reports and charts
+   - Revenue analytics
+   - Product performance metrics
+   - Consumer behavior analysis
+   - Export reports to PDF/Excel
+
+3. INVENTORY MANAGEMENT ENHANCEMENTS
+   - Low stock alerts
+   - Automatic reorder points
+   - Batch tracking
+   - Expiry date management
+   - Multi-warehouse support
+
+4. NOTIFICATION SYSTEM ENHANCEMENTS
+   - Push notifications for mobile apps
+   - Email notifications
+   - SMS notifications for critical events
+   - Notification preferences management
+
+5. SEARCH AND FILTERING ENHANCEMENTS
+   - Advanced product search with filters
+   - Full-text search capabilities
+   - Search history
+   - Recommended products based on history
+
+6. DOCUMENT MANAGEMENT
+   - Upload and manage documents (contracts, invoices)
+   - Document versioning
+   - Digital signatures
+   - Document sharing between parties
+
+7. RATING AND REVIEW SYSTEM
+   - Product ratings and reviews
+   - Supplier ratings
+   - Review moderation
+   - Rating-based recommendations
+
+8. LOYALTY PROGRAM
+   - Points system for consumers
+   - Discount coupons
+   - Referral program
+   - Rewards management
+
+9. MOBILE APP ENHANCEMENTS
+   - Offline mode support
+   - Biometric authentication
+   - Dark mode
+   - Widget support for quick actions
+
+10. ADMINISTRATIVE FEATURES
+    - System-wide admin dashboard
+    - User activity logging
+    - Audit trails
+    - System configuration management
+    - Backup and restore functionality
+
+11. INTEGRATION CAPABILITIES
+    - ERP system integration
+    - Accounting software integration
+    - Shipping provider integration
+    - Third-party API support
+
+12. SECURITY ENHANCEMENTS
+    - Two-factor authentication (2FA)
+    - IP whitelisting
+    - Advanced rate limiting
+    - Security audit logging
+    - Data encryption at rest
+
+13. PERFORMANCE OPTIMIZATIONS
+    - Caching layer improvements
+    - Database query optimization
+    - CDN integration for static assets
+    - Image compression and optimization
+    - Lazy loading for large datasets
+
+14. ACCESSIBILITY IMPROVEMENTS
+    - Screen reader optimization
+    - Keyboard navigation support
+    - High contrast mode
+    - Font size adjustment
+    - Voice commands support
+
+================================================================================
+SYSTEM OVERVIEW
+================================================================================
+
+The SCP Platform is a comprehensive B2B solution connecting institutional consumers 
+(restaurants, hotels) with suppliers. The system consists of:
+
+- Backend API: Go-based RESTful API with PostgreSQL database
+- Consumer Mobile App: Flutter app for consumers to browse, order, and chat
+- Supplier Sales Mobile App: Flutter app for sales representatives
+- Supplier Web Portal: Next.js web application for owners and managers
+
+All components are fully integrated and functional, with proper error handling, 
+authentication, and data validation throughout the system.
+
+================================================================================
+END OF DOCUMENTATION REPORT
+================================================================================
+
