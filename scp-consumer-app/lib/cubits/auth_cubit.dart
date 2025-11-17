@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:scp_mobile_shared/models/user_model.dart';
@@ -38,6 +39,8 @@ class AuthState extends Equatable {
 /// Auth Cubit
 class AuthCubit extends Cubit<AuthState> {
   final AuthService _authService;
+  Timer? _checkAuthTimer;
+  bool _isClosed = false;
 
   AuthCubit({
     AuthService? authService,
@@ -48,14 +51,26 @@ class AuthCubit extends Cubit<AuthState> {
     _checkAuthStatus();
   }
 
+  @override
+  Future<void> close() {
+    _isClosed = true;
+    _checkAuthTimer?.cancel();
+    return super.close();
+  }
+
   /// Check if user is already authenticated
   /// This is non-blocking and won't cause app to be killed
   Future<void> _checkAuthStatus() async {
     // Add small delay to let app start first
     await Future.delayed(const Duration(milliseconds: 100));
     
+    // Check if cubit is closed before proceeding
+    if (_isClosed || isClosed) return;
+    
     print('🔐 [AUTH] Checking authentication status...');
-    emit(state.copyWith(isLoading: true));
+    if (!_isClosed && !isClosed) {
+      emit(state.copyWith(isLoading: true));
+    }
     
     try {
       // Add timeout to prevent hanging if backend is unreachable
@@ -70,6 +85,9 @@ class AuthCubit extends Cubit<AuthState> {
             },
           );
       
+      // Check if cubit is closed before emitting
+      if (_isClosed || isClosed) return;
+      
       print('🔐 [AUTH] Is authenticated: $isAuthenticated');
       
       if (isAuthenticated) {
@@ -83,14 +101,17 @@ class AuthCubit extends Cubit<AuthState> {
               },
             );
         
+        // Check if cubit is closed before emitting
+        if (_isClosed || isClosed) return;
+        
         if (user != null) {
           print('✅ [AUTH] User authenticated: ${user.email}');
-        emit(state.copyWith(
-          isAuthenticated: true,
-          user: user,
-          isLoading: false,
-        ));
-      } else {
+          emit(state.copyWith(
+            isAuthenticated: true,
+            user: user,
+            isLoading: false,
+          ));
+        } else {
           print('⚠️  [AUTH] User data not available');
           emit(state.copyWith(isLoading: false));
         }
@@ -99,6 +120,9 @@ class AuthCubit extends Cubit<AuthState> {
         emit(state.copyWith(isLoading: false));
       }
     } catch (e, stackTrace) {
+      // Check if cubit is closed before emitting
+      if (_isClosed || isClosed) return;
+      
       print('═══════════════════════════════════════');
       print('❌ [AUTH] ERROR CHECKING AUTH STATUS');
       print('═══════════════════════════════════════');

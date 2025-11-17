@@ -27,7 +27,12 @@ class OrderService {
         },
       );
 
-      return OrderModel.fromJson(response.data as Map<String, dynamic>);
+      // Handle both direct format and wrapped format
+      final dynamic payload = response.data;
+      final Map<String, dynamic> orderData = (payload is Map && payload['data'] != null)
+          ? payload['data'] as Map<String, dynamic>
+          : payload as Map<String, dynamic>;
+      return OrderModel.fromJson(orderData);
     } catch (e) {
       throw Exception('Failed to place order: $e');
     }
@@ -49,7 +54,15 @@ class OrderService {
         },
       );
 
-      final List<dynamic> data = response.data['results'] as List<dynamic>;
+      // Handle both paginated format (results) and direct format (data)
+      final dynamic payload = response.data;
+      final List<dynamic> data = (payload is Map && payload['results'] != null)
+          ? payload['results'] as List<dynamic>
+          : (payload is Map && payload['data'] != null)
+              ? payload['data'] as List<dynamic>
+              : (payload is List)
+                  ? payload
+                  : <dynamic>[];
       return data.map((e) => OrderModel.fromJson(e as Map<String, dynamic>)).toList();
     } catch (e) {
       throw Exception('Failed to get order history: $e');
@@ -60,7 +73,12 @@ class OrderService {
   Future<OrderModel> getOrderDetails(String orderId) async {
     try {
       final response = await _httpService.get('/consumer/orders/$orderId');
-      return OrderModel.fromJson(response.data as Map<String, dynamic>);
+      // Handle both direct format and wrapped format
+      final dynamic payload = response.data;
+      final Map<String, dynamic> orderData = (payload is Map && payload['data'] != null)
+          ? payload['data'] as Map<String, dynamic>
+          : payload as Map<String, dynamic>;
+      return OrderModel.fromJson(orderData);
     } catch (e) {
       throw Exception('Failed to get order details: $e');
     }
@@ -70,7 +88,15 @@ class OrderService {
   Future<List<OrderModel>> getCurrentOrders() async {
     try {
       final response = await _httpService.get('/consumer/orders/current');
-      final List<dynamic> data = response.data['results'] as List<dynamic>;
+      // Handle both paginated format (results) and direct format (data)
+      final dynamic payload = response.data;
+      final List<dynamic> data = (payload is Map && payload['results'] != null)
+          ? payload['results'] as List<dynamic>
+          : (payload is Map && payload['data'] != null)
+              ? payload['data'] as List<dynamic>
+              : (payload is List)
+                  ? payload
+                  : <dynamic>[];
       return data.map((e) => OrderModel.fromJson(e as Map<String, dynamic>)).toList();
     } catch (e) {
       throw Exception('Failed to get current orders: $e');
@@ -90,7 +116,12 @@ class OrderService {
   Future<OrderModel> trackOrder(String orderId) async {
     try {
       final response = await _httpService.get('/consumer/orders/$orderId/track');
-      return OrderModel.fromJson(response.data as Map<String, dynamic>);
+      // Handle both direct format and wrapped format
+      final dynamic payload = response.data;
+      final Map<String, dynamic> orderData = (payload is Map && payload['data'] != null)
+          ? payload['data'] as Map<String, dynamic>
+          : payload as Map<String, dynamic>;
+      return OrderModel.fromJson(orderData);
     } catch (e) {
       throw Exception('Failed to track order: $e');
     }

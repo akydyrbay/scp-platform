@@ -15,16 +15,25 @@ export interface LoginResponse {
 
 export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
   const client = getClientApiClient()
-  const response = await client.post<LoginResponse>('/auth/login', {
+  const response = await client.post<any>('/auth/login', {
     ...credentials,
     role: 'supplier',
   })
 
-  if (typeof window !== 'undefined' && response.data.accessToken) {
-    localStorage.setItem('auth_token', response.data.accessToken)
+  // Backend returns access_token (snake_case), transform to accessToken (camelCase)
+  const accessToken = response.data.access_token || response.data.accessToken
+  const refreshToken = response.data.refresh_token || response.data.refreshToken
+  const user = response.data.user
+
+  if (typeof window !== 'undefined' && accessToken) {
+    localStorage.setItem('auth_token', accessToken)
   }
 
-  return response.data
+  return {
+    accessToken,
+    refreshToken,
+    user,
+  }
 }
 
 export async function logout(): Promise<void> {

@@ -5,15 +5,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/scp-platform/backend/internal/models"
-	"github.com/scp-platform/backend/internal/repository"
 )
 
 type ChatHandler struct {
-	conversationRepo *repository.ConversationRepository
-	messageRepo      *repository.MessageRepository
+	conversationRepo ConversationRepositoryInterface
+	messageRepo      MessageRepositoryInterface
 }
 
-func NewChatHandler(conversationRepo *repository.ConversationRepository, messageRepo *repository.MessageRepository) *ChatHandler {
+func NewChatHandler(conversationRepo ConversationRepositoryInterface, messageRepo MessageRepositoryInterface) *ChatHandler {
 	return &ChatHandler{
 		conversationRepo: conversationRepo,
 		messageRepo:      messageRepo,
@@ -42,7 +41,8 @@ func (h *ChatHandler) GetConversations(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, SuccessResponse(conversations))
+	// Return paginated format expected by Flutter frontend
+	c.JSON(http.StatusOK, PaginatedResponse(conversations, 1, len(conversations), len(conversations)))
 }
 
 func (h *ChatHandler) GetMessages(c *gin.Context) {

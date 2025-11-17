@@ -18,7 +18,15 @@ class CannedReplyService {
         },
       );
 
-      final List<dynamic> data = response.data['results'] as List<dynamic>;
+      // Handle both paginated format (results) and direct format (data)
+      final dynamic payload = response.data;
+      final List<dynamic> data = (payload is Map && payload['results'] != null)
+          ? payload['results'] as List<dynamic>
+          : (payload is Map && payload['data'] != null)
+              ? payload['data'] as List<dynamic>
+              : (payload is List)
+                  ? payload
+                  : <dynamic>[];
       return data
           .map((e) => CannedReplyModel.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -43,7 +51,12 @@ class CannedReplyService {
         },
       );
 
-      return CannedReplyModel.fromJson(response.data as Map<String, dynamic>);
+      // Handle both direct format and wrapped format
+      final dynamic payload = response.data;
+      final Map<String, dynamic> replyData = (payload is Map && payload['data'] != null)
+          ? payload['data'] as Map<String, dynamic>
+          : payload as Map<String, dynamic>;
+      return CannedReplyModel.fromJson(replyData);
     } catch (e) {
       throw Exception('Failed to create canned reply: $e');
     }

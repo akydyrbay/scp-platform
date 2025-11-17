@@ -1,8 +1,22 @@
 import 'package:scp_mobile_shared/models/order_model.dart';
 import 'package:scp_mobile_shared/services/http_service.dart';
 
+/// Interface for supplier order service operations
+abstract class SupplierOrderServiceInterface {
+  Future<List<OrderModel>> getOrders({int page = 1, int pageSize = 20});
+  Future<OrderModel> getOrderDetails(String orderId);
+  Future<OrderModel> trackOrder(String orderId);
+  Future<OrderModel> placeOrder({
+    required String supplierId,
+    required List<Map<String, dynamic>> items,
+    ShippingAddress? shippingAddress,
+    String? notes,
+  });
+  Future<void> cancelOrder(String orderId);
+}
+
 /// Supplier-side order service hitting /supplier endpoints
-class SupplierOrderService {
+class SupplierOrderService implements SupplierOrderServiceInterface {
   final HttpService _httpService;
 
   SupplierOrderService({HttpService? httpService})

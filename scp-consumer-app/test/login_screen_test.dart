@@ -4,12 +4,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:scp_consumer_app/screens/auth/login_screen.dart';
 import 'package:scp_consumer_app/cubits/auth_cubit.dart';
 import 'package:scp_mobile_shared/services/auth_service.dart';
+import 'package:mocktail/mocktail.dart';
+
+class MockAuthService extends Mock implements AuthService {}
 
 void main() {
   group('LoginScreen Widget Tests', () {
     testWidgets('should display login form', (WidgetTester tester) async {
-      // Create AuthCubit with mocked service to avoid async issues in tests
-      final authCubit = AuthCubit(authService: AuthService());
+      final mockAuthService = MockAuthService();
+      when(() => mockAuthService.isAuthenticated()).thenAnswer((_) async => false);
+      final authCubit = AuthCubit(authService: mockAuthService);
       
       await tester.pumpWidget(
         MaterialApp(
@@ -20,9 +24,9 @@ void main() {
         ),
       );
 
-      // Wait for widget tree to build and for _checkAuthStatus to complete
+      // Pump to build widget tree and wait for async operations
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500)); // Wait for async auth check
+      await tester.pump(const Duration(milliseconds: 200)); // Wait for _checkAuthStatus
 
       // Verify login form elements are present
       expect(find.text('SCP Consumer'), findsOneWidget);
@@ -32,19 +36,27 @@ void main() {
       expect(find.byType(ElevatedButton), findsOneWidget);
       expect(find.text('Forgot Password?'), findsOneWidget);
       
-      // Cleanup
-      authCubit.close();
+      // Cleanup - wait for any pending operations before closing
+      await tester.pump(const Duration(milliseconds: 100));
+      await authCubit.close();
     });
 
     testWidgets('should toggle password visibility', (WidgetTester tester) async {
+      final mockAuthService = MockAuthService();
+      when(() => mockAuthService.isAuthenticated()).thenAnswer((_) async => false);
+      
       await tester.pumpWidget(
         MaterialApp(
           home: BlocProvider(
-            create: (_) => AuthCubit(),
+            create: (_) => AuthCubit(authService: mockAuthService),
             child: const LoginScreen(),
           ),
         ),
       );
+
+      // Pump to build widget tree and wait for async operations
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200)); // Wait for _checkAuthStatus
 
       // Find password field
       final passwordField = find.byType(TextFormField).last;
@@ -64,18 +76,21 @@ void main() {
     });
 
     testWidgets('should validate email field', (WidgetTester tester) async {
+      final mockAuthService = MockAuthService();
+      when(() => mockAuthService.isAuthenticated()).thenAnswer((_) async => false);
+      
       await tester.pumpWidget(
         MaterialApp(
           home: BlocProvider(
-            create: (_) => AuthCubit(),
+            create: (_) => AuthCubit(authService: mockAuthService),
             child: const LoginScreen(),
           ),
         ),
       );
 
-      // Wait for widget tree to build (pump a few times to allow async operations)
+      // Pump to build widget tree and wait for async operations
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 200)); // Wait for _checkAuthStatus
 
       // Find email field and enter invalid email
       final emailField = find.byType(TextFormField).first;
@@ -94,18 +109,23 @@ void main() {
     });
 
     testWidgets('should show loading indicator during login', (WidgetTester tester) async {
+      final mockAuthService = MockAuthService();
+      when(() => mockAuthService.isAuthenticated()).thenAnswer((_) async => false);
+      when(() => mockAuthService.login(any(), any(), role: any(named: 'role')))
+          .thenAnswer((_) async => throw Exception('Network error')); // Simulate network delay
+      
       await tester.pumpWidget(
         MaterialApp(
           home: BlocProvider(
-            create: (_) => AuthCubit(),
+            create: (_) => AuthCubit(authService: mockAuthService),
             child: const LoginScreen(),
           ),
         ),
       );
 
-      // Wait for widget tree to build (pump a few times to allow async operations)
+      // Pump to build widget tree and wait for async operations
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 200)); // Wait for _checkAuthStatus
 
       // Enter valid credentials
       final emailField = find.byType(TextFormField).first;

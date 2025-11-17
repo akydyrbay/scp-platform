@@ -27,7 +27,15 @@ class SupplierService {
         },
       );
 
-      final List<dynamic> data = response.data['results'] as List<dynamic>;
+      // Handle both paginated format (results) and direct format (data)
+      final dynamic payload = response.data;
+      final List<dynamic> data = (payload is Map && payload['results'] != null)
+          ? payload['results'] as List<dynamic>
+          : (payload is Map && payload['data'] != null)
+              ? payload['data'] as List<dynamic>
+              : (payload is List)
+                  ? payload
+                  : <dynamic>[];
       return data.map((e) => SupplierModel.fromJson(e as Map<String, dynamic>)).toList();
     } catch (e) {
       throw Exception('Failed to discover suppliers: $e');
@@ -38,7 +46,12 @@ class SupplierService {
   Future<SupplierModel> getSupplierDetails(String supplierId) async {
     try {
       final response = await _httpService.get('/suppliers/$supplierId');
-      return SupplierModel.fromJson(response.data as Map<String, dynamic>);
+      // Handle both direct format and wrapped format
+      final dynamic payload = response.data;
+      final Map<String, dynamic> supplierData = (payload is Map && payload['data'] != null)
+          ? payload['data'] as Map<String, dynamic>
+          : payload as Map<String, dynamic>;
+      return SupplierModel.fromJson(supplierData);
     } catch (e) {
       throw Exception('Failed to get supplier details: $e');
     }
@@ -57,7 +70,12 @@ class SupplierService {
         },
       );
 
-      return LinkRequest.fromJson(response.data as Map<String, dynamic>);
+      // Handle both direct format and wrapped format
+      final dynamic payload = response.data;
+      final Map<String, dynamic> linkData = (payload is Map && payload['data'] != null)
+          ? payload['data'] as Map<String, dynamic>
+          : payload as Map<String, dynamic>;
+      return LinkRequest.fromJson(linkData);
     } catch (e) {
       throw Exception('Failed to send link request: $e');
     }
@@ -84,7 +102,15 @@ class SupplierService {
   Future<List<SupplierModel>> getLinkedSuppliers() async {
     try {
       final response = await _httpService.get('/consumer/linked-suppliers');
-      final List<dynamic> data = response.data['results'] as List<dynamic>;
+      // Handle both paginated format (results) and direct format (data)
+      final dynamic payload = response.data;
+      final List<dynamic> data = (payload is Map && payload['results'] != null)
+          ? payload['results'] as List<dynamic>
+          : (payload is Map && payload['data'] != null)
+              ? payload['data'] as List<dynamic>
+              : (payload is List)
+                  ? payload
+                  : <dynamic>[];
       return data.map((e) => SupplierModel.fromJson(e as Map<String, dynamic>)).toList();
     } catch (e) {
       throw Exception('Failed to get linked suppliers: $e');

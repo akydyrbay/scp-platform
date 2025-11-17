@@ -4,16 +4,15 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/scp-platform/backend/internal/repository"
 	"github.com/scp-platform/backend/internal/services"
 )
 
 type OrderHandler struct {
-	orderService *services.OrderService
-	orderRepo    *repository.OrderRepository
+	orderService OrderServiceInterface
+	orderRepo    OrderRepositoryInterface
 }
 
-func NewOrderHandler(orderService *services.OrderService, orderRepo *repository.OrderRepository) *OrderHandler {
+func NewOrderHandler(orderService OrderServiceInterface, orderRepo OrderRepositoryInterface) *OrderHandler {
 	return &OrderHandler{
 		orderService: orderService,
 		orderRepo:    orderRepo,

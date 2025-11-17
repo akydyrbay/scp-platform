@@ -47,9 +47,9 @@ class OrderState extends Equatable {
 
 /// Order Cubit
 class OrderCubit extends Cubit<OrderState> {
-  final SupplierOrderService _orderService;
+  final SupplierOrderServiceInterface _orderService;
 
-  OrderCubit({SupplierOrderService? orderService})
+  OrderCubit({SupplierOrderServiceInterface? orderService})
       : _orderService = orderService ?? SupplierOrderService(),
         super(const OrderState());
 
