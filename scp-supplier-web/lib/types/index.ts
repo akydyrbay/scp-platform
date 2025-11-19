@@ -1,15 +1,24 @@
-export type UserRole = 'owner' | 'manager' | 'sales_rep'
+export type UserRole = 'owner' | 'manager' | 'sales_rep' | 'sales'
 
 export interface User {
   id: string
   email: string
+  first_name?: string
+  last_name?: string
+  company_name?: string
+  phone_number?: string
+  role: UserRole
+  profile_image_url?: string
+  supplier_id?: string
+  created_at: string
+  updated_at?: string
+  // Frontend convenience properties (transformed from snake_case)
   firstName?: string
   lastName?: string
   companyName?: string
   phoneNumber?: string
-  role: UserRole
   profileImageUrl?: string
-  createdAt: string
+  createdAt?: string
   updatedAt?: string
 }
 
@@ -80,11 +89,18 @@ export interface Complaint {
 }
 
 export interface DashboardStats {
-  totalOrders: number
-  pendingOrders: number
-  pendingLinkRequests: number
-  lowStockItems: number
-  recentOrders: Order[]
-  lowStockProducts: Product[]
+  total_orders: number
+  pending_orders: number
+  pending_link_requests: number
+  low_stock_items: number
+  recent_orders: Order[]
+  low_stock_products: Product[]
+  // Frontend convenience properties (transformed from snake_case)
+  totalOrders?: number
+  pendingOrders?: number
+  pendingLinkRequests?: number
+  lowStockItems?: number
+  recentOrders?: Order[]
+  lowStockProducts?: Product[]
 }
 

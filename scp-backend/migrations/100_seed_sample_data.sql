@@ -12,10 +12,11 @@ VALUES
   ('11111111-1111-1111-1111-111111111111', 'Demo Supplier', 'A demo supplier for local development', 'supplier@example.com', '+10000000000', '123 Demo Street', now())
 ON CONFLICT (id) DO NOTHING;
 
--- Users (owner, consumer, sales_rep)
+-- Users (owner, manager, consumer, sales_rep)
 INSERT INTO users (id, email, password_hash, first_name, last_name, role, supplier_id, created_at)
 VALUES
   ('22222222-2222-2222-2222-222222222222', 'owner@example.com', crypt('password123', gen_salt('bf', 10)), 'Owner', 'Demo', 'owner', '11111111-1111-1111-1111-111111111111', now()),
+  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'manager@example.com', crypt('password123', gen_salt('bf', 10)), 'Manager', 'Demo', 'manager', '11111111-1111-1111-1111-111111111111', now()),
   ('33333333-3333-3333-3333-333333333333', 'consumer@example.com', crypt('password123', gen_salt('bf', 10)), 'Consumer', 'Demo', 'consumer', NULL, now()),
   ('44444444-4444-4444-4444-444444444444', 'sales@example.com', crypt('password123', gen_salt('bf', 10)), 'Sales', 'Rep', 'sales_rep', '11111111-1111-1111-1111-111111111111', now())
 ON CONFLICT (email) DO NOTHING;

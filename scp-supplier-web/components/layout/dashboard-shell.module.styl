@@ -1,0 +1,119 @@
+layout
+  display flex
+  min-height 100vh
+  background-color var(--background)
+
+sidebar
+  position fixed
+  inset 0 auto 0 0
+  width 256px
+  background-color var(--surface)
+  border-right 1px solid var(--border)
+  display flex
+  flex-direction column
+  padding 32px 24px
+  gap 24px
+  box-shadow 12px 0 32px rgba(15, 23, 42, 0.06)
+
+sidebarHeader
+  display flex
+  align-items center
+  justify-content space-between
+
+brand
+  font-size 18px
+  font-weight 600
+  color var(--foreground)
+  letter-spacing 0.02em
+
+sidebarNav
+  flex 1
+  overflow-y auto
+  padding-right 4px
+
+sidebarSection
+  margin-bottom 28px
+
+sidebarSectionLabel
+  font-size 11px
+  font-weight 600
+  text-transform uppercase
+  letter-spacing 0.12em
+  color var(--muted)
+  margin-bottom 12px
+
+sidebarMenu
+  display grid
+  gap 6px
+
+sidebarFooter
+  display grid
+  gap 12px
+
+main
+  flex 1
+  margin-left 256px
+  padding 40px 48px
+  background linear-gradient(180deg, #f8faff 0%, #f5f7fb 50%, #eef2fb 100%)
+  min-height 100vh
+
+loading
+  width 100%
+  padding 40px
+  text-align center
+  color var(--muted)
+
+signOutButton
+  width 100%
+  padding 12px 14px
+  border-radius 12px
+  border 1px solid rgba(239, 68, 68, 0.4)
+  color var(--danger)
+  background-color rgba(239, 68, 68, 0.06)
+  font-weight 600
+  transition transform 0.2s ease, box-shadow 0.2s ease
+
+signOutButton:hover
+  transform translateY(-1px)
+  box-shadow 0 10px 20px rgba(239, 68, 68, 0.15)
+
+:global([data-sidebar='collapsed']) .sidebar
+  transform translateX(-100%)
+
+:global([data-sidebar='collapsed']) .main
+  margin-left 0
+
+@media (max-width: 1024px)
+  layout
+    flex-direction column
+  sidebar
+    position relative
+    width 100%
+    inset auto
+    flex-direction row
+    align-items center
+    padding 20px 16px
+    gap 16px
+    overflow-x auto
+  sidebarHeader
+    margin-right auto
+  sidebarNav
+    flex none
+    display flex
+    gap 12px
+  sidebarSection
+    margin-bottom 0
+  sidebarSectionLabel
+    display none
+  sidebarMenu
+    display flex
+    gap 12px
+  sidebarFooter
+    flex none
+    display flex
+    align-items center
+    gap 12px
+  main
+    margin-left 0
+    padding 32px 20px
+

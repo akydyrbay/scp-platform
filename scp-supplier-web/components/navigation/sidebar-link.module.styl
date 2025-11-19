@@ -1,0 +1,32 @@
+link
+  display grid
+  grid-template-columns 28px 1fr
+  gap 12px
+  align-items center
+  padding 12px 14px
+  border-radius 14px
+  transition background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease
+  color var(--muted)
+  font-weight 500
+
+link:hover
+  background-color var(--surface-muted)
+  transform translateX(4px)
+  box-shadow 0 10px 20px rgba(15, 23, 42, 0.06)
+
+icon
+  display inline-flex
+  align-items center
+  justify-content center
+  width 28px
+  height 28px
+  border-radius 9px
+  background-color rgba(79, 70, 229, 0.08)
+  color var(--accent)
+  font-size 16px
+
+active
+  background-color var(--accent-soft)
+  color var(--accent)
+  box-shadow inset 0 0 0 1px rgba(79, 70, 229, 0.3), 0 14px 30px rgba(79, 70, 229, 0.18)
+
