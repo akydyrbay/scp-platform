@@ -345,7 +345,7 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
                         itemBuilder: (context, index) {
                           // Messages are sorted ASC (oldest first), so with reverse:true,
                           // index 0 (oldest) shows at top, last index (newest) shows at bottom
-                          final message = messages[index];
+                          final message = messages[messages.length - 1 - index];
                           final isCurrentUser = _isCurrentUser(message.senderId);
                           
                           return Align(
