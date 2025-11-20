@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../cubits/dashboard_cubit.dart';
+import '../chat/chat_message_screen.dart';
 import 'package:scp_mobile_shared/widgets/loading_indicator.dart';
 import 'package:scp_mobile_shared/widgets/error_widget.dart';
 import 'package:scp_mobile_shared/config/app_theme_supplier.dart';
+import 'package:scp_mobile_shared/models/order_model.dart';
 
 /// Dashboard screen for supplier sales reps
 class SupplierDashboardScreen extends StatefulWidget {
@@ -210,7 +212,17 @@ class _SupplierDashboardScreenState extends State<SupplierDashboardScreen> {
                   )
                 : null,
             onTap: () {
-              // Navigate to chat
+              // Navigate to chat message screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatMessageScreen(
+                    conversationId: conv.id,
+                    supplierName: conv.consumerName,
+                    supplierLogoUrl: conv.consumerAvatarUrl,
+                  ),
+                ),
+              );
             },
           ),
         );
@@ -242,13 +254,13 @@ class _SupplierDashboardScreenState extends State<SupplierDashboardScreen> {
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: _getStatusColor(order.status.name).withValues(alpha: 0.1),
+                color: _getStatusColor(_getStatusString(order.status)).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                order.status.name.toUpperCase(),
+                _getStatusString(order.status).toUpperCase(),
                 style: TextStyle(
-                  color: _getStatusColor(order.status.name),
+                  color: _getStatusColor(_getStatusString(order.status)),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
@@ -261,6 +273,23 @@ class _SupplierDashboardScreenState extends State<SupplierDashboardScreen> {
         );
       }).toList(),
     );
+  }
+
+  String _getStatusString(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'pending';
+      case OrderStatus.confirmed:
+        return 'confirmed';
+      case OrderStatus.processing:
+        return 'processing';
+      case OrderStatus.shipped:
+        return 'shipped';
+      case OrderStatus.delivered:
+        return 'delivered';
+      case OrderStatus.cancelled:
+        return 'cancelled';
+    }
   }
 
   Color _getStatusColor(String status) {

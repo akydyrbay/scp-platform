@@ -84,6 +84,10 @@ class ChatCubit extends Cubit<ChatState> {
     try {
       final messagesList = await _chatService.getMessages(conversationId);
       final updatedMessages = Map<String, List<MessageModel>>.from(state.messages);
+      // Backend returns messages in DESC order (newest first)
+      // Reverse to ASC order (oldest first) so that with ListView reverse:true,
+      // newest messages appear at bottom
+      messagesList.sort((a, b) => a.timestamp.compareTo(b.timestamp));
       updatedMessages[conversationId] = messagesList;
 
       emit(state.copyWith(
@@ -111,14 +115,22 @@ class ChatCubit extends Cubit<ChatState> {
         orderId: orderId,
       );
 
-      // Add message to state
-      final updatedMessages = Map<String, List<MessageModel>>.from(state.messages);
-      if (!updatedMessages.containsKey(conversationId)) {
-        updatedMessages[conversationId] = [];
+      // Add message to state - create new list to trigger Equatable change detection
+      final updatedMessages = <String, List<MessageModel>>{};
+      for (final entry in state.messages.entries) {
+        updatedMessages[entry.key] = List<MessageModel>.from(entry.value);
       }
-      updatedMessages[conversationId]!.add(message);
+      
+      final existingMessages = updatedMessages[conversationId] ?? [];
+      final newMessagesList = List<MessageModel>.from(existingMessages)..add(message);
+      // Keep messages sorted ASC (oldest first) for ListView reverse:true
+      newMessagesList.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      updatedMessages[conversationId] = newMessagesList;
 
-      emit(state.copyWith(messages: updatedMessages));
+      emit(state.copyWith(
+        messages: updatedMessages,
+        selectedConversationId: conversationId,
+      ));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -137,13 +149,22 @@ class ChatCubit extends Cubit<ChatState> {
         orderId: orderId,
       );
 
-      final updatedMessages = Map<String, List<MessageModel>>.from(state.messages);
-      if (!updatedMessages.containsKey(conversationId)) {
-        updatedMessages[conversationId] = [];
+      // Add message to state - create new list to trigger Equatable change detection
+      final updatedMessages = <String, List<MessageModel>>{};
+      for (final entry in state.messages.entries) {
+        updatedMessages[entry.key] = List<MessageModel>.from(entry.value);
       }
-      updatedMessages[conversationId]!.add(message);
+      
+      final existingMessages = updatedMessages[conversationId] ?? [];
+      final newMessagesList = List<MessageModel>.from(existingMessages)..add(message);
+      // Keep messages sorted ASC (oldest first) for ListView reverse:true
+      newMessagesList.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      updatedMessages[conversationId] = newMessagesList;
 
-      emit(state.copyWith(messages: updatedMessages));
+      emit(state.copyWith(
+        messages: updatedMessages,
+        selectedConversationId: conversationId,
+      ));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -162,13 +183,22 @@ class ChatCubit extends Cubit<ChatState> {
         orderId: orderId,
       );
 
-      final updatedMessages = Map<String, List<MessageModel>>.from(state.messages);
-      if (!updatedMessages.containsKey(conversationId)) {
-        updatedMessages[conversationId] = [];
+      // Add message to state - create new list to trigger Equatable change detection
+      final updatedMessages = <String, List<MessageModel>>{};
+      for (final entry in state.messages.entries) {
+        updatedMessages[entry.key] = List<MessageModel>.from(entry.value);
       }
-      updatedMessages[conversationId]!.add(message);
+      
+      final existingMessages = updatedMessages[conversationId] ?? [];
+      final newMessagesList = List<MessageModel>.from(existingMessages)..add(message);
+      // Keep messages sorted ASC (oldest first) for ListView reverse:true
+      newMessagesList.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      updatedMessages[conversationId] = newMessagesList;
 
-      emit(state.copyWith(messages: updatedMessages));
+      emit(state.copyWith(
+        messages: updatedMessages,
+        selectedConversationId: conversationId,
+      ));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }

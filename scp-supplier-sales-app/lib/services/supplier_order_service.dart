@@ -36,7 +36,18 @@ class SupplierOrderService implements SupplierOrderServiceInterface {
         },
       );
 
-      final List<dynamic> data = response.data['results'] as List<dynamic>;
+      // Handle null results - backend may return null if no orders exist
+      final results = response.data['results'];
+      if (results == null) {
+        return [];
+      }
+
+      // Ensure results is a List
+      if (results is! List) {
+        return [];
+      }
+
+      final List<dynamic> data = results as List<dynamic>;
       return data
           .map((e) => OrderModel.fromJson(e as Map<String, dynamic>))
           .toList();

@@ -8,5 +8,5 @@ CREATE TABLE IF NOT EXISTS canned_replies (
     updated_at TIMESTAMP
 );
 
-CREATE INDEX idx_canned_replies_supplier_id ON canned_replies(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_canned_replies_supplier_id ON canned_replies(supplier_id);
 

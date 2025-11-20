@@ -269,18 +269,49 @@ class HttpService {
     ProgressCallback? onSendProgress,
   }) async {
     try {
-      final formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(file.path),
-        ...?additionalData,
-      });
+      // Get file name from path
+      final fileName = file.path.split('/').last;
+      
+      // Create multipart file with proper filename
+      final multipartFile = await MultipartFile.fromFile(
+        file.path,
+        filename: fileName,
+      );
+
+      // Build form data
+      final formDataMap = <String, dynamic>{
+        'file': multipartFile,
+      };
+      
+      // Add additional data if provided
+      if (additionalData != null) {
+        formDataMap.addAll(additionalData);
+      }
+
+      final formData = FormData.fromMap(formDataMap);
+
+      // Log for debugging
+      print('📤 [HTTP] Uploading file: $fileName to $path');
+      print('📤 [HTTP] Form data keys: ${formDataMap.keys.toList()}');
 
       final response = await _dio.post(
         path,
         data: formData,
+        options: Options(
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
         onSendProgress: onSendProgress,
       );
+      
+      print('✅ [HTTP] File upload successful: ${response.statusCode}');
       return response;
     } on DioException catch (e) {
+      print('❌ [HTTP] File upload failed: ${e.message}');
+      if (e.response != null) {
+        print('❌ [HTTP] Response: ${e.response?.data}');
+      }
       throw _handleError(e);
     }
   }

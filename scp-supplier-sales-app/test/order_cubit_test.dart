@@ -1,87 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:scp_mobile_shared/models/order_model.dart';
-import 'package:scp_supplier_sales_app/services/supplier_order_service.dart';
 import 'package:mocktail/mocktail.dart';
 import '../lib/cubits/order_cubit.dart';
+import '../lib/services/supplier_order_service.dart';
 
-class MockSupplierOrderService extends Mock implements SupplierOrderServiceInterface {
-  @override
-  Future<List<OrderModel>> getOrders({int page = 1, int pageSize = 20}) => super.noSuchMethod(
-        Invocation.method(#getOrders, [], {#page: page, #pageSize: pageSize}),
-        returnValue: Future.value(<OrderModel>[]),
-      ) as Future<List<OrderModel>>;
-
-  @override
-  Future<OrderModel> getOrderDetails(String orderId) => super.noSuchMethod(
-        Invocation.method(#getOrderDetails, [orderId]),
-        returnValue: Future.value(OrderModel(
-          id: orderId,
-          orderNumber: 'ORD-001',
-          supplierId: 'supplier1',
-          supplierName: 'Test Supplier',
-          items: [],
-          subtotal: 0.0,
-          tax: 0.0,
-          shippingFee: 0.0,
-          total: 0.0,
-          status: OrderStatus.pending,
-          orderDate: DateTime.now(),
-        )),
-      ) as Future<OrderModel>;
-
-  @override
-  Future<OrderModel> trackOrder(String orderId) => super.noSuchMethod(
-        Invocation.method(#trackOrder, [orderId]),
-        returnValue: Future.value(OrderModel(
-          id: orderId,
-          orderNumber: 'ORD-001',
-          supplierId: 'supplier1',
-          supplierName: 'Test Supplier',
-          items: [],
-          subtotal: 0.0,
-          tax: 0.0,
-          shippingFee: 0.0,
-          total: 0.0,
-          status: OrderStatus.pending,
-          orderDate: DateTime.now(),
-        )),
-      ) as Future<OrderModel>;
-
-  @override
-  Future<OrderModel> placeOrder({
-    required String supplierId,
-    required List<Map<String, dynamic>> items,
-    ShippingAddress? shippingAddress,
-    String? notes,
-  }) => super.noSuchMethod(
-        Invocation.method(#placeOrder, [], {
-          #supplierId: supplierId,
-          #items: items,
-          #shippingAddress: shippingAddress,
-          #notes: notes,
-        }),
-        returnValue: Future.value(OrderModel(
-          id: 'order1',
-          orderNumber: 'ORD-001',
-          supplierId: supplierId,
-          supplierName: 'Test Supplier',
-          items: [],
-          subtotal: 0.0,
-          tax: 0.0,
-          shippingFee: 0.0,
-          total: 0.0,
-          status: OrderStatus.pending,
-          orderDate: DateTime.now(),
-        )),
-      ) as Future<OrderModel>;
-
-  @override
-  Future<void> cancelOrder(String orderId) => super.noSuchMethod(
-        Invocation.method(#cancelOrder, [orderId]),
-        returnValue: Future.value(),
-      ) as Future<void>;
-}
+class MockSupplierOrderService extends Mock implements SupplierOrderServiceInterface {}
 
 void main() {
   group('OrderCubit (Supplier)', () {
@@ -101,7 +25,7 @@ void main() {
       'loadOrderHistory loads orders successfully',
       build: () {
         final mockService = MockSupplierOrderService();
-        when(() => mockService.getOrders()).thenAnswer(
+        when(() => mockService.getOrders(page: any(named: 'page'), pageSize: any(named: 'pageSize'))).thenAnswer(
           (_) async => [
             OrderModel(
               id: 'order1',
@@ -139,7 +63,7 @@ void main() {
       'loadOrderHistory handles errors correctly',
       build: () {
         final mockService = MockSupplierOrderService();
-        when(() => mockService.getOrders()).thenThrow(
+        when(() => mockService.getOrders(page: any(named: 'page'), pageSize: any(named: 'pageSize'))).thenThrow(
           Exception('Failed to load orders'),
         );
         return OrderCubit(orderService: mockService);
@@ -151,6 +75,154 @@ void main() {
           isLoading: false,
           error: 'Exception: Failed to load orders',
         ),
+      ],
+    );
+
+    blocTest<OrderCubit, OrderState>(
+      'loadCurrentOrders filters pending and confirmed orders',
+      build: () {
+        final mockService = MockSupplierOrderService();
+        when(() => mockService.getOrders(page: any(named: 'page'), pageSize: any(named: 'pageSize'))).thenAnswer(
+          (_) async => [
+            OrderModel(
+              id: 'order1',
+              orderNumber: 'ORD-001',
+              supplierId: 'supplier1',
+              supplierName: 'Test Supplier',
+              items: [],
+              subtotal: 100.0,
+              tax: 10.0,
+              shippingFee: 5.0,
+              total: 115.0,
+              status: OrderStatus.pending,
+              orderDate: DateTime.now(),
+            ),
+            OrderModel(
+              id: 'order2',
+              orderNumber: 'ORD-002',
+              supplierId: 'supplier1',
+              supplierName: 'Test Supplier',
+              items: [],
+              subtotal: 200.0,
+              tax: 20.0,
+              shippingFee: 10.0,
+              total: 230.0,
+              status: OrderStatus.confirmed,
+              orderDate: DateTime.now(),
+            ),
+            OrderModel(
+              id: 'order3',
+              orderNumber: 'ORD-003',
+              supplierId: 'supplier1',
+              supplierName: 'Test Supplier',
+              items: [],
+              subtotal: 300.0,
+              tax: 30.0,
+              shippingFee: 15.0,
+              total: 345.0,
+              status: OrderStatus.delivered,
+              orderDate: DateTime.now(),
+            ),
+          ],
+        );
+        return OrderCubit(orderService: mockService);
+      },
+      act: (cubit) => cubit.loadCurrentOrders(),
+      expect: () => [
+        OrderState(isLoading: true, error: null),
+        predicate<OrderState>((state) =>
+          state.isLoading == false &&
+          state.currentOrders.length == 2 &&
+          state.currentOrders.every((o) =>
+            o.status == OrderStatus.pending ||
+            o.status == OrderStatus.confirmed ||
+            o.status == OrderStatus.processing)),
+      ],
+    );
+
+    blocTest<OrderCubit, OrderState>(
+      'loadOrderDetails loads order details',
+      build: () {
+        final mockService = MockSupplierOrderService();
+        when(() => mockService.getOrderDetails('order1')).thenAnswer(
+          (_) async => OrderModel(
+            id: 'order1',
+            orderNumber: 'ORD-001',
+            supplierId: 'supplier1',
+            supplierName: 'Test Supplier',
+            items: [],
+            subtotal: 100.0,
+            tax: 10.0,
+            shippingFee: 5.0,
+            total: 115.0,
+            status: OrderStatus.pending,
+            orderDate: DateTime.now(),
+          ),
+        );
+        return OrderCubit(orderService: mockService);
+      },
+      act: (cubit) => cubit.loadOrderDetails('order1'),
+      expect: () => [
+        OrderState(isLoading: true, error: null),
+        predicate<OrderState>((state) =>
+          state.isLoading == false &&
+          state.selectedOrder != null &&
+          state.selectedOrder!.id == 'order1'),
+      ],
+    );
+
+    blocTest<OrderCubit, OrderState>(
+      'trackOrder loads order tracking info',
+      build: () {
+        final mockService = MockSupplierOrderService();
+        when(() => mockService.trackOrder('order1')).thenAnswer(
+          (_) async => OrderModel(
+            id: 'order1',
+            orderNumber: 'ORD-001',
+            supplierId: 'supplier1',
+            supplierName: 'Test Supplier',
+            items: [],
+            subtotal: 100.0,
+            tax: 10.0,
+            shippingFee: 5.0,
+            total: 115.0,
+            status: OrderStatus.processing,
+            orderDate: DateTime.now(),
+          ),
+        );
+        return OrderCubit(orderService: mockService);
+      },
+      act: (cubit) => cubit.trackOrder('order1'),
+      expect: () => [
+        OrderState(isLoading: true, error: null),
+        predicate<OrderState>((state) =>
+          state.isLoading == false &&
+          state.selectedOrder != null &&
+          state.selectedOrder!.id == 'order1'),
+      ],
+    );
+
+    blocTest<OrderCubit, OrderState>(
+      'clearSelectedOrder clears selected order',
+      build: () => OrderCubit(),
+      seed: () => OrderState(
+        selectedOrder: OrderModel(
+          id: 'order1',
+          orderNumber: 'ORD-001',
+          supplierId: 'supplier1',
+          supplierName: 'Test Supplier',
+          items: [],
+          subtotal: 100.0,
+          tax: 10.0,
+          shippingFee: 5.0,
+          total: 115.0,
+          status: OrderStatus.pending,
+          orderDate: DateTime.now(),
+        ),
+      ),
+      act: (cubit) => cubit.clearSelectedOrder(),
+      expect: () => [
+        OrderState(selectedOrder: null),
       ],
     );
   });

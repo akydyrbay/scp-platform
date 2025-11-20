@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS consumer_links (
     UNIQUE(consumer_id, supplier_id)
 );
 
-CREATE INDEX idx_consumer_links_consumer_id ON consumer_links(consumer_id);
-CREATE INDEX idx_consumer_links_supplier_id ON consumer_links(supplier_id);
-CREATE INDEX idx_consumer_links_status ON consumer_links(status);
+CREATE INDEX IF NOT EXISTS idx_consumer_links_consumer_id ON consumer_links(consumer_id);
+CREATE INDEX IF NOT EXISTS idx_consumer_links_supplier_id ON consumer_links(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_consumer_links_status ON consumer_links(status);
 

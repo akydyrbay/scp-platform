@@ -38,14 +38,19 @@ class AuthState extends Equatable {
 /// Auth Cubit
 class AuthCubit extends Cubit<AuthState> {
   final AuthService _authService;
+  final bool _skipInitialCheck;
 
   AuthCubit({
     AuthService? authService,
+    bool skipInitialCheck = false,
   })  : _authService = authService ?? AuthService(),
+        _skipInitialCheck = skipInitialCheck,
         super(const AuthState()) {
     // Don't block constructor - check auth status asynchronously after app starts
     // This prevents app from being killed during startup (Android kills apps that take >3 seconds)
-    _checkAuthStatus();
+    if (!_skipInitialCheck) {
+      _checkAuthStatus();
+    }
   }
 
   /// Check if user is already authenticated

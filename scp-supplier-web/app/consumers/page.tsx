@@ -5,8 +5,7 @@ import {
   getConsumerLinks,
   approveConsumerLink,
   rejectConsumerLink,
-  blockConsumer,
-  unlinkConsumer,
+  blockConsumerLink,
 } from '@/lib/api/consumers'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Button } from '@/components/ui/button'
@@ -21,7 +20,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import toast from 'react-hot-toast'
-import { Check, X, Ban, Unlink } from 'lucide-react'
+import { Check, X, Ban } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function ConsumersPage() {
@@ -57,24 +56,13 @@ export default function ConsumersPage() {
   })
 
   const blockMutation = useMutation({
-    mutationFn: (consumerId: string) => blockConsumer(consumerId, token || undefined),
+    mutationFn: (linkId: string) => blockConsumerLink(linkId, token || undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['consumer-links'] })
-      toast.success('Consumer blocked')
+      toast.success('Consumer link blocked')
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to block consumer')
-    },
-  })
-
-  const unlinkMutation = useMutation({
-    mutationFn: (consumerId: string) => unlinkConsumer(consumerId, token || undefined),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['consumer-links'] })
-      toast.success('Consumer unlinked')
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to unlink consumer')
+      toast.error(error.response?.data?.message || 'Failed to block consumer link')
     },
   })
 
@@ -207,21 +195,12 @@ export default function ConsumersPage() {
                             <div className="flex justify-end gap-2">
                               <Button
                                 size="sm"
-                                variant="outline"
-                                onClick={() => blockMutation.mutate(link.consumerId)}
+                                variant="destructive"
+                                onClick={() => blockMutation.mutate(link.id)}
                                 disabled={blockMutation.isPending}
                               >
                                 <Ban className="mr-2 h-4 w-4" />
                                 Block
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => unlinkMutation.mutate(link.consumerId)}
-                                disabled={unlinkMutation.isPending}
-                              >
-                                <Unlink className="mr-2 h-4 w-4" />
-                                Unlink
                               </Button>
                             </div>
                           </TableCell>

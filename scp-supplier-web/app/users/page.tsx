@@ -260,7 +260,7 @@ export default function UsersPage() {
                   {users.map((u) => (
                     <TableRow key={u.id}>
                       <TableCell>
-                        {u.firstName} {u.lastName}
+                        {u.firstName || u.first_name || ''} {u.lastName || u.last_name || ''}
                       </TableCell>
                       <TableCell>{u.email}</TableCell>
                       <TableCell>
@@ -269,7 +269,7 @@ export default function UsersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {new Date(u.createdAt).toLocaleDateString()}
+                        {new Date(u.createdAt || u.created_at || '').toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">
                         {u.id !== user?.id && (

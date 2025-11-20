@@ -66,28 +66,39 @@ func (r *ConversationRepository) GetByConsumerID(consumerID string) ([]models.Co
 	var convs []models.Conversation
 	err := r.db.Select(&convs, `
 		SELECT c.*,
-			s.id as "supplier.id",
-			s.name as "supplier.name"
+			COALESCE(s.name, '') as supplier_name
 		FROM conversations c
 		LEFT JOIN suppliers s ON c.supplier_id = s.id
 		WHERE c.consumer_id = $1
 		ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC
 	`, consumerID)
+	
+	// Ensure we always return a non-nil slice
+	if convs == nil {
+		convs = []models.Conversation{}
+	}
+	
 	return convs, err
 }
 
 func (r *ConversationRepository) GetBySupplierID(supplierID string) ([]models.Conversation, error) {
 	var convs []models.Conversation
+	// For supplier view, we can get supplier_name from the same supplier
+	// but we'll populate it via JOIN for consistency
 	err := r.db.Select(&convs, `
 		SELECT c.*,
-			u.id as "consumer.id",
-			u.email as "consumer.email",
-			u.company_name as "consumer.company_name"
+			COALESCE(s.name, '') as supplier_name
 		FROM conversations c
-		LEFT JOIN users u ON c.consumer_id = u.id
+		LEFT JOIN suppliers s ON c.supplier_id = s.id
 		WHERE c.supplier_id = $1
 		ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC
 	`, supplierID)
+	
+	// Ensure we always return a non-nil slice
+	if convs == nil {
+		convs = []models.Conversation{}
+	}
+	
 	return convs, err
 }
 

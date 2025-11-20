@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:scp_mobile_shared/models/notification_model.dart';
-import 'package:scp_mobile_shared/services/notification_service.dart';
+import 'package:scp_mobile_shared/services/notification_service_sales.dart';
 
 /// Notification State
 class NotificationState extends Equatable {
@@ -37,10 +37,10 @@ class NotificationState extends Equatable {
 
 /// Notification Cubit
 class NotificationCubit extends Cubit<NotificationState> {
-  final NotificationService _notificationService;
+  final NotificationServiceSales _notificationService;
 
-  NotificationCubit({NotificationService? notificationService})
-      : _notificationService = notificationService ?? NotificationService(),
+  NotificationCubit({NotificationServiceSales? notificationService})
+      : _notificationService = notificationService ?? NotificationServiceSales(),
         super(const NotificationState());
 
   /// Load notifications

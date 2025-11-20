@@ -33,19 +33,57 @@ class MessageModel extends Equatable {
   });
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
+    // Handle timestamp - can be 'timestamp' or 'created_at'
+    final timestampValue = json['timestamp'] ?? json['created_at'];
+    final timestamp = timestampValue is String
+        ? DateTime.parse(timestampValue)
+        : timestampValue is DateTime
+            ? timestampValue
+            : DateTime.now();
+
+    // Handle sender name - can be 'sender_name' or constructed from sender object
+    String senderName = json['sender_name'] as String? ?? '';
+    if (senderName.isEmpty && json['sender'] is Map) {
+      final sender = json['sender'] as Map<String, dynamic>;
+      if (sender['first_name'] != null && sender['last_name'] != null) {
+        senderName = '${sender['first_name']} ${sender['last_name']}';
+      } else if (sender['first_name'] != null) {
+        senderName = sender['first_name'] as String;
+      } else if (sender['company_name'] != null) {
+        senderName = sender['company_name'] as String;
+      } else if (sender['email'] != null) {
+        senderName = sender['email'] as String;
+      }
+    }
+    if (senderName.isEmpty) {
+      senderName = json['sender_id'] as String? ?? 'Unknown';
+    }
+
+    // Handle file URL - can be 'file_url' or 'attachment_url'
+    final fileUrl = json['file_url'] as String? ?? json['attachment_url'] as String?;
+
+    // Handle message type
+    final typeStr = json['type'] as String? ?? json['sender_role'] as String? ?? 'text';
+    final messageType = _parseMessageType(typeStr);
+
     return MessageModel(
       id: json['id'] as String,
       conversationId: json['conversation_id'] as String,
       senderId: json['sender_id'] as String,
-      senderName: json['sender_name'] as String,
-      senderAvatarUrl: json['sender_avatar_url'] as String?,
-      content: json['content'] as String,
-      type: _parseMessageType(json['type'] as String),
-      fileUrl: json['file_url'] as String?,
+      senderName: senderName,
+      senderAvatarUrl: json['sender_avatar_url'] as String? ?? 
+                       (json['sender'] is Map ? (json['sender'] as Map<String, dynamic>)['profile_image_url'] as String? : null),
+      content: json['content'] as String? ?? '',
+      type: messageType,
+      fileUrl: fileUrl,
       fileName: json['file_name'] as String?,
       fileSizeBytes: json['file_size_bytes'] as int?,
-      timestamp: DateTime.parse(json['timestamp'] as String),
-      isRead: json['is_read'] as bool? ?? false,
+      timestamp: timestamp,
+      isRead: json['is_read'] is bool 
+          ? json['is_read'] as bool
+          : json['is_read'] is int
+              ? (json['is_read'] as int) != 0
+              : false,
       orderId: json['order_id'] as String?,
     );
   }
@@ -58,6 +96,8 @@ class MessageModel extends Equatable {
         return MessageType.image;
       case 'file':
         return MessageType.file;
+      case 'audio':
+        return MessageType.audio;
       default:
         return MessageType.text;
     }
@@ -104,6 +144,7 @@ enum MessageType {
   text,
   image,
   file,
+  audio,
 }
 
 /// Conversation model
@@ -131,10 +172,36 @@ class ConversationModel extends Equatable {
   });
 
   factory ConversationModel.fromJson(Map<String, dynamic> json) {
+    // Safely handle id - required field
+    final id = json['id'] as String?;
+    if (id == null) {
+      throw FormatException('Conversation id is required but was null');
+    }
+
+    // Safely handle supplier_id - required field
+    final supplierId = json['supplier_id'] as String?;
+    if (supplierId == null) {
+      throw FormatException('Conversation supplier_id is required but was null');
+    }
+
+    // Safely handle supplier_name - check nested supplier object or flat field
+    String supplierName = '';
+    if (json['supplier'] is Map) {
+      final supplier = json['supplier'] as Map<String, dynamic>;
+      supplierName = (supplier['name'] as String?) ?? '';
+    }
+    if (supplierName.isEmpty) {
+      supplierName = (json['supplier_name'] as String?) ?? '';
+    }
+
+    // Safely handle created_at
+    final createdAtStr = (json['created_at'] as String?) ?? 
+        DateTime.now().toIso8601String();
+
     return ConversationModel(
-      id: json['id'] as String,
-      supplierId: json['supplier_id'] as String,
-      supplierName: json['supplier_name'] as String,
+      id: id,
+      supplierId: supplierId,
+      supplierName: supplierName,
       supplierLogoUrl: json['supplier_logo_url'] as String?,
       lastMessage: json['last_message'] as String?,
       lastMessageTime: json['last_message_time'] != null
@@ -142,7 +209,7 @@ class ConversationModel extends Equatable {
           : null,
       unreadCount: json['unread_count'] as int? ?? 0,
       orderId: json['order_id'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: DateTime.parse(createdAtStr),
     );
   }
 

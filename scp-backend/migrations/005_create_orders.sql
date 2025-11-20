@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS orders (
     updated_at TIMESTAMP
 );
 
-CREATE INDEX idx_orders_consumer_id ON orders(consumer_id);
-CREATE INDEX idx_orders_supplier_id ON orders(supplier_id);
-CREATE INDEX idx_orders_status ON orders(status);
-CREATE INDEX idx_orders_created_at ON orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_consumer_id ON orders(consumer_id);
+CREATE INDEX IF NOT EXISTS idx_orders_supplier_id ON orders(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at DESC);
 

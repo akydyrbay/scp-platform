@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.scp-platform.com/api/v1'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api/v1'
 
 // Server-side client (takes token as parameter to avoid async issues)
 export function getServerApiClient(token?: string): AxiosInstance {

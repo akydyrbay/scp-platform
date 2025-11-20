@@ -14,6 +14,6 @@ CREATE TABLE IF NOT EXISTS products (
     updated_at TIMESTAMP
 );
 
-CREATE INDEX idx_products_supplier_id ON products(supplier_id);
-CREATE INDEX idx_products_stock_level ON products(stock_level);
+CREATE INDEX IF NOT EXISTS idx_products_supplier_id ON products(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_products_stock_level ON products(stock_level);
 

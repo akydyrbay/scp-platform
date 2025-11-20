@@ -25,8 +25,9 @@ export interface BulkUpdateData {
 
 export async function getProducts(token?: string): Promise<Product[]> {
   const client = getClientApiClient(token)
-  const response = await client.get<Product[]>('/supplier/products')
-  return response.data
+  // Backend returns paginated response: { results: [...], pagination: {...} }
+  const response = await client.get<{ results: Product[]; pagination: any }>('/supplier/products')
+  return response.data.results || []
 }
 
 export async function getProduct(productId: string, token?: string): Promise<Product> {

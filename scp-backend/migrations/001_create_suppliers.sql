@@ -10,5 +10,5 @@ CREATE TABLE IF NOT EXISTS suppliers (
     updated_at TIMESTAMP
 );
 
-CREATE INDEX idx_suppliers_email ON suppliers(email);
+CREATE INDEX IF NOT EXISTS idx_suppliers_email ON suppliers(email);
 

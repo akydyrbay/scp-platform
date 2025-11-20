@@ -3,8 +3,9 @@ import type { Complaint } from '../types'
 
 export async function getComplaints(token?: string): Promise<Complaint[]> {
   const client = getClientApiClient(token)
-  const response = await client.get<Complaint[]>('/supplier/complaints')
-  return response.data
+  // Backend returns paginated response: { results: [...], pagination: {...} }
+  const response = await client.get<{ results: Complaint[]; pagination: any }>('/supplier/complaints')
+  return response.data.results || []
 }
 
 export async function getComplaint(complaintId: string, token?: string): Promise<Complaint> {

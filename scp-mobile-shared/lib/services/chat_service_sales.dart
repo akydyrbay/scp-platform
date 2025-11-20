@@ -123,11 +123,22 @@ class ChatServiceSales {
     String? orderId,
   }) async {
     try {
+      // Determine file type from extension
+      final fileName = file.path.split('/').last;
+      final ext = fileName.split('.').last.toLowerCase();
+      String fileType = 'file';
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext)) {
+        fileType = 'image';
+      } else if (['mp3', 'wav', 'm4a', 'aac', 'ogg'].contains(ext)) {
+        fileType = 'audio';
+      }
+
       final response = await _httpService.postFile(
         '/supplier/conversations/$conversationId/messages',
         file,
         additionalData: {
-          'type': 'file',
+          'type': fileType,
+          'content': fileName,
           if (orderId != null) 'order_id': orderId,
         },
       );
@@ -146,7 +157,7 @@ class ChatServiceSales {
   /// Mark messages as read
   Future<void> markMessagesAsRead(String conversationId) async {
     try {
-      await _httpService.post('/supplier/conversations/$conversationId/mark-read');
+      await _httpService.post('/supplier/conversations/$conversationId/messages/read');
     } catch (e) {
       throw Exception('Failed to mark messages as read: $e');
     }

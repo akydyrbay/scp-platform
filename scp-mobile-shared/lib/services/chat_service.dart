@@ -171,7 +171,7 @@ class ChatService {
   Future<void> markMessagesAsRead(String conversationId) async {
     try {
       await _httpService.post(
-        '/consumer/conversations/$conversationId/mark-read',
+        '/consumer/conversations/$conversationId/messages/read',
       );
     } catch (e) {
       throw Exception('Failed to mark messages as read: $e');

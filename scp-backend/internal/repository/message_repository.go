@@ -34,13 +34,21 @@ func (r *MessageRepository) GetByConversationID(conversationID string, page, pag
 			u.id as "sender.id",
 			u.email as "sender.email",
 			u.first_name as "sender.first_name",
-			u.last_name as "sender.last_name"
+			u.last_name as "sender.last_name",
+			u.company_name as "sender.company_name",
+			u.profile_image_url as "sender.profile_image_url"
 		FROM messages m
 		LEFT JOIN users u ON m.sender_id = u.id
 		WHERE m.conversation_id = $1
 		ORDER BY m.created_at DESC
 		LIMIT $2 OFFSET $3
 	`, conversationID, pageSize, offset)
+	
+	// Ensure we always return a non-nil slice
+	if messages == nil {
+		messages = []models.Message{}
+	}
+	
 	return messages, err
 }
 

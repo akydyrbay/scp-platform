@@ -29,7 +29,7 @@ func (h *UploadHandler) UploadFile(c *gin.Context) {
 
 	// Validate file type
 	ext := strings.ToLower(filepath.Ext(file.Filename))
-	allowedExts := []string{".jpg", ".jpeg", ".png", ".gif", ".pdf"}
+	allowedExts := []string{".jpg", ".jpeg", ".png", ".gif", ".pdf", ".mp3", ".wav", ".m4a", ".aac", ".ogg"}
 	allowed := false
 	for _, allowedExt := range allowedExts {
 		if ext == allowedExt {
@@ -39,7 +39,7 @@ func (h *UploadHandler) UploadFile(c *gin.Context) {
 	}
 
 	if !allowed {
-		c.JSON(http.StatusBadRequest, ErrorResponse("Invalid file type. Allowed: jpg, jpeg, png, gif, pdf"))
+		c.JSON(http.StatusBadRequest, ErrorResponse("Invalid file type. Allowed: jpg, jpeg, png, gif, pdf, mp3, wav, m4a, aac, ogg"))
 		return
 	}
 

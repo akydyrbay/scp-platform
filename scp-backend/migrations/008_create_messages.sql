@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
-CREATE INDEX idx_messages_sender_id ON messages(sender_id);
-CREATE INDEX idx_messages_created_at ON messages(created_at);
-CREATE INDEX idx_messages_is_read ON messages(is_read);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_is_read ON messages(is_read);
 

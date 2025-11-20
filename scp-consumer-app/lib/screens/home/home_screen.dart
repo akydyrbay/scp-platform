@@ -56,6 +56,13 @@ class _HomeScreenState extends State<HomeScreen> {
               // Navigate to cart
             },
           ),
+          // Debug button - refresh products
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<ProductCubit>().loadProducts();
+            },
+          ),
         ],
       ),
       body: Column(
@@ -83,28 +90,56 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           // Products list
           Expanded(
-            child: BlocBuilder<ProductCubit, ProductState>(
-              builder: (context, state) {
-                if (state.isLoading && state.products.isEmpty) {
-                  return const LoadingIndicator();
+            child: BlocListener<ProductCubit, ProductState>(
+              listener: (context, state) {
+                // Log state changes for debugging
+                print('═══════════════════════════════════════');
+                print('🏠 [HOME] State changed');
+                print('🏠 [HOME] Products count: ${state.products.length}');
+                print('🏠 [HOME] Is loading: ${state.isLoading}');
+                print('🏠 [HOME] Error: ${state.error ?? "none"}');
+                if (state.products.isNotEmpty) {
+                  print('✅ [HOME] Products available: ${state.products.length}');
+                  print('✅ [HOME] First product: ${state.products.first.name}');
+                } else if (!state.isLoading && state.error == null) {
+                  print('⚠️  [HOME] No products and no error - may not have approved links');
+                  print('⚠️  [HOME] Check: 1) User has approved supplier links');
+                  print('⚠️  [HOME] Check: 2) Linked suppliers have products');
+                  print('⚠️  [HOME] Check: 3) Consumer ID in token matches database');
+                } else if (state.error != null) {
+                  print('❌ [HOME] Error occurred: ${state.error}');
                 }
+                print('═══════════════════════════════════════');
+              },
+              child: BlocBuilder<ProductCubit, ProductState>(
+                builder: (context, state) {
+                  // Show error if there is one (regardless of loading state)
+                  if (state.error != null && state.products.isEmpty && !state.isLoading) {
+                    return ErrorDisplay(
+                      message: state.error!,
+                      onRetry: () => context.read<ProductCubit>().loadProducts(),
+                    );
+                  }
 
-                if (state.error != null && state.products.isEmpty) {
-                  return ErrorDisplay(
-                    message: state.error!,
-                    onRetry: () => context.read<ProductCubit>().loadProducts(),
-                  );
-                }
+                  if (state.isLoading && state.products.isEmpty) {
+                    return const LoadingIndicator();
+                  }
 
-                if (state.products.isEmpty) {
-                  return EmptyStateWidget(
-                    icon: Icons.inventory_2_outlined,
-                    title: 'No products found',
-                    subtitle: 'Start by linking with a supplier',
-                  );
-                }
+                  if (state.products.isEmpty) {
+                    print('⚠️  [HOME_UI] Showing empty state - products list is empty');
+                    print('⚠️  [HOME_UI] IsLoading: ${state.isLoading}');
+                    print('⚠️  [HOME_UI] Error: ${state.error ?? "none"}');
+                    return EmptyStateWidget(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'No products found',
+                      subtitle: state.error != null 
+                          ? 'Error: ${state.error}'
+                          : 'Start by linking with a supplier. Once approved, products will appear here.',
+                    );
+                  }
 
-                return GridView.builder(
+                  print('✅ [HOME_UI] Rendering ${state.products.length} products in GridView');
+                  return GridView.builder(
                   padding: const EdgeInsets.all(8),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
@@ -133,7 +168,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                 );
-              },
+                },
+              ),
             ),
           ),
         ],

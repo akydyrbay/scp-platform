@@ -5,6 +5,7 @@ import 'package:scp_mobile_shared/config/app_theme.dart';
 import 'package:scp_mobile_shared/widgets/loading_indicator.dart';
 import 'package:scp_mobile_shared/widgets/error_widget.dart';
 import 'package:scp_mobile_shared/widgets/empty_state_widget.dart';
+import 'package:scp_mobile_shared/models/order_model.dart';
 
 /// Orders screen
 class OrdersScreen extends StatefulWidget {
@@ -22,6 +23,23 @@ class _OrdersScreenState extends State<OrdersScreen> {
     super.initState();
     context.read<OrderCubit>().loadCurrentOrders();
     context.read<OrderCubit>().loadOrderHistory();
+  }
+
+  String _getStatusString(OrderStatus status) {
+    switch (status) {
+      case OrderStatus.pending:
+        return 'pending';
+      case OrderStatus.confirmed:
+        return 'confirmed';
+      case OrderStatus.processing:
+        return 'processing';
+      case OrderStatus.shipped:
+        return 'shipped';
+      case OrderStatus.delivered:
+        return 'delivered';
+      case OrderStatus.cancelled:
+        return 'cancelled';
+    }
   }
 
   Color _getStatusColor(String status) {
@@ -185,13 +203,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: _getStatusColor(order.status.name).withValues(alpha: 0.1),
+            color: _getStatusColor(_getStatusString(order.status)).withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
-            order.status.name.toUpperCase(),
+            _getStatusString(order.status).toUpperCase(),
             style: TextStyle(
-              color: _getStatusColor(order.status.name),
+              color: _getStatusColor(_getStatusString(order.status)),
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),

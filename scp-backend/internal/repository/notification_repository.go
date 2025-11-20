@@ -32,7 +32,7 @@ func (r *NotificationRepository) GetByUserID(userID string, page, pageSize int) 
 
 	err := r.db.Get(&total, "SELECT COUNT(*) FROM notifications WHERE user_id = $1", userID)
 	if err != nil {
-		return nil, 0, err
+		return []models.Notification{}, 0, err
 	}
 
 	offset := (page - 1) * pageSize
@@ -42,6 +42,12 @@ func (r *NotificationRepository) GetByUserID(userID string, page, pageSize int) 
 		ORDER BY created_at DESC
 		LIMIT $2 OFFSET $3
 	`, userID, pageSize, offset)
+	
+	// Ensure we always return a non-nil slice
+	if notifications == nil {
+		notifications = []models.Notification{}
+	}
+	
 	return notifications, total, err
 }
 

@@ -17,7 +17,15 @@ export async function getUsers(token?: string): Promise<User[]> {
 
 export async function createUser(data: CreateUserData, token?: string): Promise<User> {
   const client = getClientApiClient(token)
-  const response = await client.post<User>('/supplier/users', data)
+  // Backend expects snake_case
+  const requestData = {
+    email: data.email,
+    password: data.password,
+    first_name: data.firstName,
+    last_name: data.lastName,
+    role: data.role,
+  }
+  const response = await client.post<User>('/supplier/users', requestData)
   return response.data
 }
 

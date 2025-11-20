@@ -6,6 +6,7 @@ type Conversation struct {
 	ID           string     `json:"id" db:"id"`
 	ConsumerID   string     `json:"consumer_id" db:"consumer_id"`
 	SupplierID   string     `json:"supplier_id" db:"supplier_id"`
+	SupplierName string     `json:"supplier_name" db:"supplier_name"`
 	LastMessageAt *time.Time `json:"last_message_at" db:"last_message_at"`
 	UnreadCount  int        `json:"unread_count" db:"unread_count"`
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`

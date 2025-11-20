@@ -4,6 +4,7 @@ import '../../cubits/chat_sales_cubit.dart';
 import 'package:scp_mobile_shared/widgets/loading_indicator.dart';
 import 'package:scp_mobile_shared/widgets/error_widget.dart';
 import 'package:scp_mobile_shared/widgets/empty_state_widget.dart';
+import 'chat_message_screen.dart';
 
 /// Chat list screen
 class ChatListScreen extends StatefulWidget {
@@ -115,8 +116,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ],
                 ),
               onTap: () {
-                // Navigate to chat screen
+                // Load messages first, then navigate
                 context.read<ChatSalesCubit>().loadMessages(conversation.id);
+                // Navigate to chat message screen
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ChatMessageScreen(
+                      conversationId: conversation.id,
+                      supplierName: conversation.consumerName,
+                      supplierLogoUrl: conversation.consumerAvatarUrl,
+                    ),
+                  ),
+                );
               },
               );
             },

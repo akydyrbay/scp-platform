@@ -3,8 +3,9 @@ import type { Order } from '../types'
 
 export async function getOrders(token?: string): Promise<Order[]> {
   const client = getClientApiClient(token)
-  const response = await client.get<Order[]>('/supplier/orders')
-  return response.data
+  // Backend returns paginated response: { results: [...], pagination: {...} }
+  const response = await client.get<{ results: Order[]; pagination: any }>('/supplier/orders')
+  return response.data.results || []
 }
 
 export async function getOrder(orderId: string, token?: string): Promise<Order> {

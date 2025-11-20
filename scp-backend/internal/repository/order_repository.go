@@ -18,7 +18,14 @@ func NewOrderRepository(db *sqlx.DB) *OrderRepository {
 
 func (r *OrderRepository) GetByID(id string) (*models.Order, error) {
 	var order models.Order
-	err := r.db.Get(&order, "SELECT * FROM orders WHERE id = $1", id)
+	// Join with suppliers table to get supplier name
+	err := r.db.Get(&order, `
+		SELECT o.*,
+			COALESCE(s.name, '') as supplier_name
+		FROM orders o
+		LEFT JOIN suppliers s ON o.supplier_id = s.id
+		WHERE o.id = $1
+	`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -36,14 +43,20 @@ func (r *OrderRepository) getOrderItems(orderID string) ([]models.OrderItem, err
 	err := r.db.Select(&items, `
 		SELECT oi.*, 
 			p.id as "product.id",
-			p.name as "product.name",
+			COALESCE(p.name, '') as "product.name",
 			p.image_url as "product.image_url",
-			p.unit as "product.unit"
+			COALESCE(p.unit, 'unit') as "product.unit"
 		FROM order_items oi
 		LEFT JOIN products p ON oi.product_id = p.id
 		WHERE oi.order_id = $1
 		ORDER BY oi.created_at
 	`, orderID)
+	
+	// Ensure we always return a non-nil slice
+	if items == nil {
+		items = []models.OrderItem{}
+	}
+	
 	return items, err
 }
 
@@ -95,18 +108,27 @@ func (r *OrderRepository) GetByConsumerID(consumerID string, page, pageSize int)
 
 	err := r.db.Get(&total, "SELECT COUNT(*) FROM orders WHERE consumer_id = $1", consumerID)
 	if err != nil {
-		return nil, 0, err
+		return []models.Order{}, 0, err
 	}
 
 	offset := (page - 1) * pageSize
+	// Join with suppliers table to get supplier name
 	err = r.db.Select(&orders, `
-		SELECT * FROM orders 
-		WHERE consumer_id = $1 
-		ORDER BY created_at DESC 
+		SELECT o.*,
+			COALESCE(s.name, '') as supplier_name
+		FROM orders o
+		LEFT JOIN suppliers s ON o.supplier_id = s.id
+		WHERE o.consumer_id = $1 
+		ORDER BY o.created_at DESC 
 		LIMIT $2 OFFSET $3
 	`, consumerID, pageSize, offset)
 	if err != nil {
-		return nil, 0, err
+		return []models.Order{}, 0, err
+	}
+
+	// Ensure we always return a non-nil slice
+	if orders == nil {
+		orders = []models.Order{}
 	}
 
 	for i := range orders {
@@ -123,18 +145,27 @@ func (r *OrderRepository) GetBySupplierID(supplierID string, page, pageSize int)
 
 	err := r.db.Get(&total, "SELECT COUNT(*) FROM orders WHERE supplier_id = $1", supplierID)
 	if err != nil {
-		return nil, 0, err
+		return []models.Order{}, 0, err
 	}
 
 	offset := (page - 1) * pageSize
+	// Join with suppliers table to get supplier name
 	err = r.db.Select(&orders, `
-		SELECT * FROM orders 
-		WHERE supplier_id = $1 
-		ORDER BY created_at DESC 
+		SELECT o.*,
+			COALESCE(s.name, '') as supplier_name
+		FROM orders o
+		LEFT JOIN suppliers s ON o.supplier_id = s.id
+		WHERE o.supplier_id = $1 
+		ORDER BY o.created_at DESC 
 		LIMIT $2 OFFSET $3
 	`, supplierID, pageSize, offset)
 	if err != nil {
-		return nil, 0, err
+		return []models.Order{}, 0, err
+	}
+
+	// Ensure we always return a non-nil slice
+	if orders == nil {
+		orders = []models.Order{}
 	}
 
 	for i := range orders {

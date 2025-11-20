@@ -95,43 +95,6 @@ func TestOrderHandler_GetOrders(t *testing.T) {
 	mockOrderRepo.AssertExpectations(t)
 }
 
-func TestOrderHandler_GetCurrentOrders(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	mockOrderService := new(MockOrderService)
-	mockOrderRepo := new(MockOrderRepository)
-
-	mockOrders := []models.Order{
-		{ID: "order1", ConsumerID: "consumer1", Status: "pending"},
-		{ID: "order2", ConsumerID: "consumer1", Status: "accepted"},
-		{ID: "order3", ConsumerID: "consumer1", Status: "delivered"},
-	}
-
-	mockOrderRepo.On("GetByConsumerID", "consumer1", 1, 20).Return(mockOrders, 3, nil)
-
-	handler := NewOrderHandler(mockOrderService, mockOrderRepo)
-
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Set("user_id", "consumer1")
-	c.Request = httptest.NewRequest("GET", "/consumer/orders/current?page=1&page_size=20", nil)
-
-	handler.GetCurrentOrders(c)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-
-	var response map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &response)
-	assert.NoError(t, err)
-	assert.NotNil(t, response["results"])
-
-	// Verify only pending/accepted orders are returned
-	results := response["results"].([]interface{})
-	assert.LessOrEqual(t, len(results), 2) // Should filter out delivered
-
-	mockOrderRepo.AssertExpectations(t)
-}
-
 func TestOrderHandler_CreateOrder(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

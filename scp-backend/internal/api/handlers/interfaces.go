@@ -7,6 +7,7 @@ import (
 
 // Repository interfaces for testing
 type ConversationRepositoryInterface interface {
+	GetByID(id string) (*models.Conversation, error)
 	GetByConsumerID(consumerID string) ([]models.Conversation, error)
 	GetBySupplierID(supplierID string) ([]models.Conversation, error)
 	GetOrCreate(consumerID, supplierID string) (*models.Conversation, error)

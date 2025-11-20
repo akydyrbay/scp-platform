@@ -15,8 +15,10 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters')
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+  password: z.string()
+    .min(1, 'Password is required')
+    .refine((val) => val.length >= 6, 'Password must be at least 6 characters')
 })
 
 type LoginFormValues = z.infer<typeof loginSchema>
@@ -39,7 +41,12 @@ export default function LoginPage () {
     handleSubmit,
     formState: { errors }
   } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema)
+    resolver: zodResolver(loginSchema),
+    mode: 'onSubmit',
+    defaultValues: {
+      email: '',
+      password: ''
+    }
   })
 
   const onSubmit = async (data: LoginFormValues) => {

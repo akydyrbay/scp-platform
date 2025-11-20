@@ -17,9 +17,9 @@ CREATE TABLE IF NOT EXISTS complaints (
     updated_at TIMESTAMP
 );
 
-CREATE INDEX idx_complaints_consumer_id ON complaints(consumer_id);
-CREATE INDEX idx_complaints_supplier_id ON complaints(supplier_id);
-CREATE INDEX idx_complaints_status ON complaints(status);
-CREATE INDEX idx_complaints_priority ON complaints(priority);
-CREATE INDEX idx_complaints_created_at ON complaints(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_complaints_consumer_id ON complaints(consumer_id);
+CREATE INDEX IF NOT EXISTS idx_complaints_supplier_id ON complaints(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);
+CREATE INDEX IF NOT EXISTS idx_complaints_priority ON complaints(priority);
+CREATE INDEX IF NOT EXISTS idx_complaints_created_at ON complaints(created_at DESC);
 

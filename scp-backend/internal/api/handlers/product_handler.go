@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -35,7 +36,16 @@ func (h *ProductHandler) GetConsumerProducts(c *gin.Context) {
 	consumerID := c.GetString("user_id")
 	supplierID := c.Query("supplier_id")
 	
+	// Debug logging
+	fmt.Printf("═══════════════════════════════════════\n")
+	fmt.Printf("🔍 [PRODUCT_API] GetConsumerProducts called\n")
+	fmt.Printf("🔍 [PRODUCT_API] Consumer ID from token: %s\n", consumerID)
+	fmt.Printf("🔍 [PRODUCT_API] Supplier ID query param: %s\n", supplierID)
+	fmt.Printf("🔍 [PRODUCT_API] Email from context: %s\n", c.GetString("email"))
+	fmt.Printf("🔍 [PRODUCT_API] Role from context: %s\n", c.GetString("role"))
+	
 	page, pageSize := ParsePagination(c)
+	fmt.Printf("🔍 [PRODUCT_API] Page: %d, PageSize: %d\n", page, pageSize)
 
 	var products []models.Product
 	var total int
@@ -44,15 +54,26 @@ func (h *ProductHandler) GetConsumerProducts(c *gin.Context) {
 	// If supplier_id is provided, get products from that specific supplier
 	// Otherwise, get products from all approved linked suppliers
 	if supplierID != "" {
+		fmt.Printf("🔍 [PRODUCT_API] Getting products for specific supplier\n")
 		products, total, err = h.productRepo.GetBySupplierAndConsumer(supplierID, consumerID, page, pageSize)
 	} else {
+		fmt.Printf("🔍 [PRODUCT_API] Getting products from all approved linked suppliers\n")
 		products, total, err = h.productRepo.GetAllByConsumer(consumerID, page, pageSize)
 	}
 
 	if err != nil {
+		fmt.Printf("❌ [PRODUCT_API] Error: %v\n", err)
 		c.JSON(http.StatusInternalServerError, ErrorResponse(err.Error()))
 		return
 	}
+
+	fmt.Printf("✅ [PRODUCT_API] Found %d products (total: %d)\n", len(products), total)
+	if len(products) > 0 {
+		fmt.Printf("✅ [PRODUCT_API] First product: %s (ID: %s)\n", products[0].Name, products[0].ID)
+	} else {
+		fmt.Printf("⚠️  [PRODUCT_API] No products found - consumer may not have approved supplier links\n")
+	}
+	fmt.Printf("═══════════════════════════════════════\n")
 
 	c.JSON(http.StatusOK, PaginatedResponse(products, page, pageSize, total))
 }

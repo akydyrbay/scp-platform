@@ -39,9 +39,37 @@ class ProductModel extends Equatable {
   String get formattedPrice => '\$${price.toStringAsFixed(2)}';
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    // Safely parse createdAt
+    DateTime createdAt;
+    try {
+      final createdAtValue = json['created_at'];
+      if (createdAtValue is String) {
+        createdAt = DateTime.parse(createdAtValue);
+      } else if (createdAtValue is DateTime) {
+        createdAt = createdAtValue;
+      } else {
+        createdAt = DateTime.now();
+      }
+    } catch (e) {
+      createdAt = DateTime.now();
+    }
+
+    // Safely parse updatedAt
+    DateTime? updatedAt;
+    try {
+      final updatedAtValue = json['updated_at'];
+      if (updatedAtValue is String && updatedAtValue.isNotEmpty) {
+        updatedAt = DateTime.parse(updatedAtValue);
+      } else if (updatedAtValue is DateTime) {
+        updatedAt = updatedAtValue;
+      }
+    } catch (e) {
+      updatedAt = null;
+    }
+
     return ProductModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
       description: json['description'] as String?,
       supplierId: json['supplier_id'] as String? ?? '',
       supplierName: json['supplier_name'] as String? ?? 'Supplier',
@@ -55,10 +83,8 @@ class ProductModel extends Equatable {
           .toList(),
       specifications: json['specifications'] as Map<String, dynamic>?,
       isAvailable: json['is_available'] as bool? ?? true,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
-          : null,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 

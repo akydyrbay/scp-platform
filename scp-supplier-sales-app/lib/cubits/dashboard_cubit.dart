@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:scp_mobile_shared/models/notification_model.dart';
-import 'package:scp_mobile_shared/services/notification_service.dart';
+import 'package:scp_mobile_shared/services/notification_service_sales.dart';
 import 'package:scp_mobile_shared/services/chat_service_sales.dart';
 import 'package:scp_mobile_shared/models/conversation_model.dart';
 import '../services/supplier_order_service.dart';
@@ -63,15 +63,15 @@ class DashboardState extends Equatable {
 class DashboardCubit extends Cubit<DashboardState> {
   final ChatServiceSales _chatService;
   final SupplierOrderService _orderService;
-  final NotificationService _notificationService;
+  final NotificationServiceSales _notificationService;
 
   DashboardCubit({
     ChatServiceSales? chatService,
     SupplierOrderService? orderService,
-    NotificationService? notificationService,
+    NotificationServiceSales? notificationService,
   })  : _chatService = chatService ?? ChatServiceSales(),
         _orderService = orderService ?? SupplierOrderService(),
-        _notificationService = notificationService ?? NotificationService(),
+        _notificationService = notificationService ?? NotificationServiceSales(),
         super(const DashboardState());
 
   /// Load dashboard data

@@ -65,6 +65,10 @@ class ProductCubit extends Cubit<ProductState> {
 
   /// Load products
   Future<void> loadProducts({String? supplierId, String? searchQuery}) async {
+    print('🔄 [PRODUCT_CUBIT] Loading products...');
+    print('🔄 [PRODUCT_CUBIT] Supplier ID: $supplierId');
+    print('🔄 [PRODUCT_CUBIT] Search Query: $searchQuery');
+    
     emit(state.copyWith(isLoading: true, error: null));
 
     try {
@@ -72,13 +76,36 @@ class ProductCubit extends Cubit<ProductState> {
         supplierId: supplierId,
         searchQuery: searchQuery,
       );
-      emit(state.copyWith(
-        products: products,
+      
+      print('═══════════════════════════════════════');
+      print('✅ [PRODUCT_CUBIT] Loaded ${products.length} products');
+      if (products.isNotEmpty) {
+        print('✅ [PRODUCT_CUBIT] First product: ${products.first.name} (${products.first.id})');
+      } else {
+        print('⚠️  [PRODUCT_CUBIT] No products returned - consumer may not have approved supplier links');
+        print('⚠️  [PRODUCT_CUBIT] Check if user has approved links in consumer_links table');
+      }
+      print('═══════════════════════════════════════');
+      
+      // Create new state with products - create new list instance to ensure Equatable detects change
+      final productsList = List<ProductModel>.from(products); // New list instance
+      
+      final newState = state.copyWith(
+        products: productsList, // Explicitly set (even if empty) to trigger state change
         isLoading: false,
         searchQuery: searchQuery ?? '',
         selectedSupplierId: supplierId,
-      ));
-    } catch (e) {
+      );
+      
+      print('🔄 [PRODUCT_CUBIT] Emitting new state with ${newState.products.length} products');
+      print('🔄 [PRODUCT_CUBIT] State products length: ${newState.products.length}');
+      print('🔄 [PRODUCT_CUBIT] State isLoading: ${newState.isLoading}');
+      print('🔄 [PRODUCT_CUBIT] State error: ${newState.error}');
+      
+      emit(newState);
+    } catch (e, stackTrace) {
+      print('❌ [PRODUCT_CUBIT] Error loading products: $e');
+      print('❌ [PRODUCT_CUBIT] Stack trace: $stackTrace');
       emit(state.copyWith(
         isLoading: false,
         error: e.toString(),

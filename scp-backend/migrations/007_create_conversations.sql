@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     UNIQUE(consumer_id, supplier_id)
 );
 
-CREATE INDEX idx_conversations_consumer_id ON conversations(consumer_id);
-CREATE INDEX idx_conversations_supplier_id ON conversations(supplier_id);
-CREATE INDEX idx_conversations_last_message_at ON conversations(last_message_at DESC);
+CREATE INDEX IF NOT EXISTS idx_conversations_consumer_id ON conversations(consumer_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_supplier_id ON conversations(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_last_message_at ON conversations(last_message_at DESC);
 

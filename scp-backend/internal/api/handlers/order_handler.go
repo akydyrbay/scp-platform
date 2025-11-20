@@ -91,6 +91,11 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 
 func (h *OrderHandler) GetSupplierOrders(c *gin.Context) {
 	supplierID := c.GetString("supplier_id")
+	if supplierID == "" {
+		c.JSON(http.StatusBadRequest, ErrorResponse("supplier_id is required"))
+		return
+	}
+
 	page, pageSize := ParsePagination(c)
 
 	orders, total, err := h.orderRepo.GetBySupplierID(supplierID, page, pageSize)
@@ -148,6 +153,7 @@ func (h *OrderHandler) GetCurrentOrders(c *gin.Context) {
 		}
 	}
 
+	// Return empty list if no current orders, not 404
 	c.JSON(http.StatusOK, PaginatedResponse(currentOrders, page, pageSize, len(currentOrders)))
 }
 

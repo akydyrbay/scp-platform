@@ -114,6 +114,108 @@ void main() {
           state.messages['conv1']!.first.content == 'Hello'),
       ],
     );
+
+    blocTest<ChatSalesCubit, ChatSalesState>(
+      'sendMessage adds message to state',
+      build: () {
+        when(() => mockChatService.sendMessage(
+          conversationId: 'conv1',
+          content: 'Test message',
+          orderId: null,
+        )).thenAnswer((_) async => MessageModel(
+          id: 'msg2',
+          conversationId: 'conv1',
+          senderId: 'sales1',
+          senderName: 'Sales Rep',
+          content: 'Test message',
+          type: MessageType.text,
+          timestamp: DateTime.now(),
+          isRead: true,
+        ));
+        return chatCubit;
+      },
+      seed: () => ChatSalesState(
+        conversations: [],
+        messages: {
+          'conv1': [
+            MessageModel(
+              id: 'msg1',
+              conversationId: 'conv1',
+              senderId: 'consumer1',
+              senderName: 'Test Consumer',
+              content: 'Hello',
+              type: MessageType.text,
+              timestamp: DateTime.now(),
+              isRead: false,
+            ),
+          ],
+        },
+      ),
+      act: (cubit) => cubit.sendMessage(
+        conversationId: 'conv1',
+        content: 'Test message',
+      ),
+      wait: const Duration(milliseconds: 200),
+      expect: () => [
+        predicate<ChatSalesState>((state) =>
+          state.messages.containsKey('conv1') &&
+          state.messages['conv1']!.length == 2 &&
+          state.messages['conv1']!.last.content == 'Test message'),
+      ],
+    );
+
+    blocTest<ChatSalesCubit, ChatSalesState>(
+      'sendMessage handles errors correctly',
+      build: () {
+        when(() => mockChatService.sendMessage(
+          conversationId: 'conv1',
+          content: 'Test message',
+          orderId: null,
+        )).thenThrow(Exception('Failed to send'));
+        return chatCubit;
+      },
+      act: (cubit) => cubit.sendMessage(
+        conversationId: 'conv1',
+        content: 'Test message',
+      ),
+      expect: () => [
+        predicate<ChatSalesState>((state) =>
+          state.error != null &&
+          state.error!.contains('Failed to send')),
+      ],
+    );
+
+    blocTest<ChatSalesCubit, ChatSalesState>(
+      'markAsRead calls service',
+      build: () {
+        when(() => mockChatService.markMessagesAsRead('conv1')).thenAnswer(
+          (_) async => {},
+        );
+        return chatCubit;
+      },
+      act: (cubit) => cubit.markAsRead('conv1'),
+      verify: (_) {
+        verify(() => mockChatService.markMessagesAsRead('conv1')).called(1);
+      },
+    );
+
+    blocTest<ChatSalesCubit, ChatSalesState>(
+      'clearSelection clears selected conversation',
+      build: () => chatCubit,
+      seed: () => ChatSalesState(
+        selectedConversationId: 'conv1',
+        conversations: [],
+        messages: {},
+      ),
+      act: (cubit) => cubit.clearSelection(),
+      expect: () => [
+        ChatSalesState(
+          selectedConversationId: null,
+          conversations: [],
+          messages: {},
+        ),
+      ],
+    );
   });
 }
 

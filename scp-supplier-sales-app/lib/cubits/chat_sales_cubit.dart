@@ -32,11 +32,14 @@ class ChatSalesState extends Equatable {
     String? selectedConversationId,
     bool? isLoading,
     String? error,
+    bool clearSelectedConversationId = false,
   }) {
     return ChatSalesState(
       conversations: conversations ?? this.conversations,
       messages: messages ?? this.messages,
-      selectedConversationId: selectedConversationId ?? this.selectedConversationId,
+      selectedConversationId: clearSelectedConversationId 
+          ? null 
+          : (selectedConversationId ?? this.selectedConversationId),
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
@@ -89,10 +92,15 @@ class ChatSalesCubit extends Cubit<ChatSalesState> {
     try {
       final messagesList = await _chatService.getMessages(conversationId);
       final updatedMessages = Map<String, List<MessageModel>>.from(state.messages);
+      // Backend returns messages in DESC order (newest first)
+      // Reverse to ASC order (oldest first) so that with ListView reverse:true,
+      // newest messages appear at bottom
+      messagesList.sort((a, b) => a.timestamp.compareTo(b.timestamp));
       updatedMessages[conversationId] = messagesList;
 
       emit(state.copyWith(
         messages: updatedMessages,
+        selectedConversationId: conversationId,
         isLoading: false,
       ));
     } catch (e) {
@@ -110,20 +118,27 @@ class ChatSalesCubit extends Cubit<ChatSalesState> {
     String? orderId,
   }) async {
     try {
-      final message = await _chatService.sendMessage(
+      await _chatService.sendMessage(
         conversationId: conversationId,
         content: content,
         orderId: orderId,
       );
 
-      // Add message to state
+      // Reload messages to ensure we have the latest from server
+      // This ensures consistency and gets any messages we might have missed
+      final messagesList = await _chatService.getMessages(conversationId);
+      
+      // Update state with all messages
       final updatedMessages = Map<String, List<MessageModel>>.from(state.messages);
-      if (!updatedMessages.containsKey(conversationId)) {
-        updatedMessages[conversationId] = [];
-      }
-      updatedMessages[conversationId]!.add(message);
+      // Sort by timestamp ASC (oldest first) so newest appears at bottom with reverse:true
+      messagesList.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      updatedMessages[conversationId] = messagesList;
 
-      emit(state.copyWith(messages: updatedMessages));
+      emit(state.copyWith(
+        messages: updatedMessages,
+        selectedConversationId: conversationId,
+        error: null,
+      ));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -136,19 +151,25 @@ class ChatSalesCubit extends Cubit<ChatSalesState> {
     String? orderId,
   }) async {
     try {
-      final message = await _chatService.sendImage(
+      await _chatService.sendImage(
         conversationId: conversationId,
         imageFile: imageFile,
         orderId: orderId,
       );
 
+      // Reload messages to ensure we have the latest from server
+      final messagesList = await _chatService.getMessages(conversationId);
+      
       final updatedMessages = Map<String, List<MessageModel>>.from(state.messages);
-      if (!updatedMessages.containsKey(conversationId)) {
-        updatedMessages[conversationId] = [];
-      }
-      updatedMessages[conversationId]!.add(message);
+      // Sort by timestamp ASC (oldest first) so newest appears at bottom with reverse:true
+      messagesList.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      updatedMessages[conversationId] = messagesList;
 
-      emit(state.copyWith(messages: updatedMessages));
+      emit(state.copyWith(
+        messages: updatedMessages,
+        selectedConversationId: conversationId,
+        error: null,
+      ));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -161,19 +182,25 @@ class ChatSalesCubit extends Cubit<ChatSalesState> {
     String? orderId,
   }) async {
     try {
-      final message = await _chatService.sendFile(
+      await _chatService.sendFile(
         conversationId: conversationId,
         file: file,
         orderId: orderId,
       );
 
+      // Reload messages to ensure we have the latest from server
+      final messagesList = await _chatService.getMessages(conversationId);
+      
       final updatedMessages = Map<String, List<MessageModel>>.from(state.messages);
-      if (!updatedMessages.containsKey(conversationId)) {
-        updatedMessages[conversationId] = [];
-      }
-      updatedMessages[conversationId]!.add(message);
+      // Sort by timestamp ASC (oldest first) so newest appears at bottom with reverse:true
+      messagesList.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      updatedMessages[conversationId] = messagesList;
 
-      emit(state.copyWith(messages: updatedMessages));
+      emit(state.copyWith(
+        messages: updatedMessages,
+        selectedConversationId: conversationId,
+        error: null,
+      ));
     } catch (e) {
       emit(state.copyWith(error: e.toString()));
     }
@@ -190,7 +217,7 @@ class ChatSalesCubit extends Cubit<ChatSalesState> {
 
   /// Clear selected conversation
   void clearSelection() {
-    emit(state.copyWith(selectedConversationId: null));
+    emit(state.copyWith(clearSelectedConversationId: true));
   }
 }
 

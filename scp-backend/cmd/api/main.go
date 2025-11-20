@@ -12,7 +12,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/scp-platform/backend/internal/api"
 	"github.com/scp-platform/backend/internal/api/handlers"
-	"github.com/scp-platform/backend/internal/api/websocket"
 	"github.com/scp-platform/backend/internal/config"
 	"github.com/scp-platform/backend/internal/repository"
 	"github.com/scp-platform/backend/internal/services"
@@ -48,6 +47,7 @@ func main() {
 	complaintRepo := repository.NewComplaintRepository(db.DB)
 	conversationRepo := repository.NewConversationRepository(db.DB)
 	messageRepo := repository.NewMessageRepository(db.DB)
+	notificationRepo := repository.NewNotificationRepository(db.DB)
 
 	// Initialize JWT service
 	jwtService := jwt.NewJWTService(
@@ -59,7 +59,6 @@ func main() {
 	// Initialize services
 	authService := services.NewAuthService(userRepo, jwtService)
 	orderService := services.NewOrderService(orderRepo, productRepo, linkRepo)
-	dashboardService := services.NewDashboardService(orderRepo, linkRepo, productRepo)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService, userRepo)
@@ -68,19 +67,13 @@ func main() {
 	consumerHandler := handlers.NewConsumerHandler(supplierRepo, linkRepo, productRepo, orderService)
 	complaintHandler := handlers.NewComplaintHandler(complaintRepo)
 	chatHandler := handlers.NewChatHandler(conversationRepo, messageRepo)
-	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
+	notificationHandler := handlers.NewNotificationHandler(notificationRepo)
 	
-	// Create uploads directory
+	// Create uploads directory for static file serving
 	uploadDir := "./uploads"
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		log.Printf("Warning: Failed to create uploads directory: %v", err)
 	}
-	uploadHandler := handlers.NewUploadHandler(uploadDir)
-
-	// Initialize WebSocket hub
-	wsHub := websocket.NewHub()
-	go wsHub.Run()
-	wsHandler := handlers.NewWebSocketHandler(wsHub)
 
 	// Setup routes
 	router := api.SetupRoutes(
@@ -90,9 +83,7 @@ func main() {
 		consumerHandler,
 		complaintHandler,
 		chatHandler,
-		dashboardHandler,
-		uploadHandler,
-		wsHandler,
+		notificationHandler,
 		jwtService,
 		cfg.Server.CORSOrigins,
 	)

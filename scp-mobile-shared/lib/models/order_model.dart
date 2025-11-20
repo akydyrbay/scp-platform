@@ -45,23 +45,42 @@ class OrderModel extends Equatable {
         ? itemsRaw.map((e) => OrderItem.fromJson(e as Map<String, dynamic>)).toList()
         : <OrderItem>[];
 
+    // Safely handle id - required field
+    final id = json['id'] as String?;
+    if (id == null) {
+      throw FormatException('Order id is required but was null');
+    }
+
+    // Safely handle order_number
     final orderNumber = (json['order_number'] as String?) ??
-        (json['id'] as String).substring(0, 8);
+        (id.length >= 8 ? id.substring(0, 8) : id);
+    
+    // Safely handle supplier_name
     final supplierName = (json['supplier_name'] as String?) ?? 'Supplier';
-    final orderDateStr = (json['order_date'] as String?) ?? (json['created_at'] as String);
+    
+    // Safely handle order_date - try multiple fields
+    final orderDateStr = (json['order_date'] as String?) ?? 
+        (json['created_at'] as String?) ?? 
+        DateTime.now().toIso8601String();
+
+    // Safely handle supplier_id - use empty string as fallback (should not happen but handle gracefully)
+    final supplierId = (json['supplier_id'] as String?) ?? '';
+
+    // Safely handle status - default to 'pending' if null
+    final statusStr = (json['status'] as String?) ?? 'pending';
 
     return OrderModel(
-      id: json['id'] as String,
+      id: id,
       orderNumber: orderNumber,
-      supplierId: json['supplier_id'] as String,
+      supplierId: supplierId,
       supplierName: supplierName,
       supplierLogoUrl: json['supplier_logo_url'] as String?,
       items: itemsList,
-      subtotal: (json['subtotal'] as num).toDouble(),
-      tax: (json['tax'] as num).toDouble(),
-      shippingFee: (json['shipping_fee'] as num).toDouble(),
-      total: (json['total'] as num).toDouble(),
-      status: _parseOrderStatus(json['status'] as String),
+      subtotal: ((json['subtotal'] as num?) ?? 0).toDouble(),
+      tax: ((json['tax'] as num?) ?? 0).toDouble(),
+      shippingFee: ((json['shipping_fee'] as num?) ?? 0).toDouble(),
+      total: ((json['total'] as num?) ?? 0).toDouble(),
+      status: _parseOrderStatus(statusStr),
       notes: json['notes'] as String?,
       orderDate: DateTime.parse(orderDateStr),
       estimatedDeliveryDate: json['estimated_delivery_date'] != null

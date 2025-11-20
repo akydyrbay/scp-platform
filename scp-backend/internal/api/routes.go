@@ -14,9 +14,7 @@ func SetupRoutes(
 	consumerHandler *handlers.ConsumerHandler,
 	complaintHandler *handlers.ComplaintHandler,
 	chatHandler *handlers.ChatHandler,
-	dashboardHandler *handlers.DashboardHandler,
-	uploadHandler *handlers.UploadHandler,
-	wsHandler *handlers.WebSocketHandler,
+	notificationHandler *handlers.NotificationHandler,
 	jwtService *jwt.JWTService,
 	corsOrigins []string,
 ) *gin.Engine {
@@ -50,16 +48,6 @@ func SetupRoutes(
 			}
 		}
 
-		// Public supplier discovery (used by consumers)
-		suppliers := v1.Group("/suppliers")
-		suppliers.Use(middleware.AuthMiddleware(jwtService))
-		suppliers.Use(middleware.RequireRole("consumer"))
-		{
-			suppliers.GET("/discover", consumerHandler.GetSuppliers)
-			suppliers.GET("/:id", consumerHandler.GetSupplier)
-			suppliers.POST("/:id/link-request", consumerHandler.RequestLink)
-		}
-
 		// Consumer routes
 		consumer := v1.Group("/consumer")
 		consumer.Use(middleware.AuthMiddleware(jwtService))
@@ -69,7 +57,6 @@ func SetupRoutes(
 			consumer.GET("/suppliers/:id", consumerHandler.GetSupplier)
 			consumer.POST("/suppliers/:id/link-request", consumerHandler.RequestLink)
 			consumer.GET("/supplier-links", consumerHandler.GetSupplierLinks)
-			consumer.GET("/link-requests", consumerHandler.GetSupplierLinks)
 			consumer.GET("/linked-suppliers", consumerHandler.GetLinkedSuppliers)
 			consumer.GET("/products", productHandler.GetConsumerProducts)
 			consumer.GET("/products/:id", productHandler.GetProduct)
@@ -77,12 +64,14 @@ func SetupRoutes(
 			consumer.GET("/orders", orderHandler.GetOrders)
 			consumer.GET("/orders/current", orderHandler.GetCurrentOrders)
 			consumer.GET("/orders/:id", orderHandler.GetOrder)
-			consumer.GET("/orders/:id/track", orderHandler.GetOrder)
 			consumer.POST("/orders/:id/cancel", orderHandler.CancelOrder)
 			consumer.GET("/conversations", chatHandler.GetConversations)
 			consumer.GET("/conversations/:id/messages", chatHandler.GetMessages)
 			consumer.POST("/conversations/:id/messages", chatHandler.SendMessage)
 			consumer.POST("/conversations/:id/messages/read", chatHandler.MarkMessagesAsRead)
+			consumer.GET("/notifications", notificationHandler.GetNotifications)
+			consumer.POST("/notifications/:id/read", notificationHandler.MarkAsRead)
+			consumer.POST("/notifications/mark-all-read", notificationHandler.MarkAllAsRead)
 		}
 
 		// Supplier routes
@@ -95,7 +84,6 @@ func SetupRoutes(
 			supplier.POST("/products", productHandler.CreateProduct)
 			supplier.PUT("/products/:id", productHandler.UpdateProduct)
 			supplier.DELETE("/products/:id", productHandler.DeleteProduct)
-			supplier.POST("/products/bulk-update", productHandler.BulkUpdateProducts)
 
 			// Orders
 			supplier.GET("/orders", orderHandler.GetSupplierOrders)
@@ -120,8 +108,10 @@ func SetupRoutes(
 			supplier.POST("/conversations/:id/messages", chatHandler.SendMessage)
 			supplier.POST("/conversations/:id/messages/read", chatHandler.MarkMessagesAsRead)
 
-			// Dashboard
-			supplier.GET("/dashboard/stats", dashboardHandler.GetStats)
+			// Notifications
+			supplier.GET("/notifications", notificationHandler.GetNotifications)
+			supplier.POST("/notifications/:id/read", notificationHandler.MarkAsRead)
+			supplier.POST("/notifications/mark-all-read", notificationHandler.MarkAllAsRead)
 
 			// User management (owner/manager only)
 			users := supplier.Group("/users")
@@ -133,19 +123,6 @@ func SetupRoutes(
 			}
 		}
 
-		// Upload
-		upload := v1.Group("/upload")
-		upload.Use(middleware.AuthMiddleware(jwtService))
-		{
-			upload.POST("", uploadHandler.UploadFile)
-		}
-
-		// WebSocket
-		ws := v1.Group("/ws")
-		ws.Use(middleware.AuthMiddleware(jwtService))
-		{
-			ws.GET("", wsHandler.HandleWebSocket)
-		}
 	}
 
 	return router

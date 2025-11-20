@@ -37,7 +37,7 @@ func (r *ProductRepository) GetBySupplier(supplierID string, page, pageSize int)
 
 	err := r.db.Get(&total, "SELECT COUNT(*) FROM products WHERE supplier_id = $1", supplierID)
 	if err != nil {
-		return nil, 0, err
+		return []models.Product{}, 0, err
 	}
 
 	offset := (page - 1) * pageSize
@@ -47,6 +47,12 @@ func (r *ProductRepository) GetBySupplier(supplierID string, page, pageSize int)
 		ORDER BY created_at DESC 
 		LIMIT $2 OFFSET $3
 	`, supplierID, pageSize, offset)
+	
+	// Ensure we always return a non-nil slice
+	if products == nil {
+		products = []models.Product{}
+	}
+	
 	return products, total, err
 }
 
@@ -62,7 +68,7 @@ func (r *ProductRepository) GetBySupplierAndConsumer(supplierID, consumerID stri
 	`
 	err := r.db.Get(&total, query, supplierID, consumerID)
 	if err != nil {
-		return nil, 0, err
+		return []models.Product{}, 0, err
 	}
 
 	offset := (page - 1) * pageSize
@@ -75,6 +81,12 @@ func (r *ProductRepository) GetBySupplierAndConsumer(supplierID, consumerID stri
 		LIMIT $3 OFFSET $4
 	`
 	err = r.db.Select(&products, selectQuery, supplierID, consumerID, pageSize, offset)
+	
+	// Ensure we always return a non-nil slice
+	if products == nil {
+		products = []models.Product{}
+	}
+	
 	return products, total, err
 }
 
@@ -82,15 +94,63 @@ func (r *ProductRepository) GetAllByConsumer(consumerID string, page, pageSize i
 	var products []models.Product
 	var total int
 
+	// Debug logging
+	fmt.Printf("🔍 [PRODUCT_REPO] GetAllByConsumer called\n")
+	fmt.Printf("🔍 [PRODUCT_REPO] Consumer ID: %s\n", consumerID)
+	fmt.Printf("🔍 [PRODUCT_REPO] Page: %d, PageSize: %d\n", page, pageSize)
+
+	// First, check if consumer has any approved links
+	var linkCount int
+	linkCheckQuery := `SELECT COUNT(*) FROM consumer_links WHERE consumer_id = $1 AND status = 'approved'`
+	err := r.db.Get(&linkCount, linkCheckQuery, consumerID)
+	if err != nil {
+		fmt.Printf("❌ [PRODUCT_REPO] Error checking consumer links: %v\n", err)
+		return []models.Product{}, 0, err
+	}
+	fmt.Printf("🔍 [PRODUCT_REPO] Consumer has %d approved supplier links\n", linkCount)
+
 	// Get products from all approved linked suppliers for the consumer
 	countQuery := `
 		SELECT COUNT(*) FROM products p
 		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
 		WHERE cl.consumer_id = $1 AND cl.status = 'approved'
 	`
-	err := r.db.Get(&total, countQuery, consumerID)
+	err = r.db.Get(&total, countQuery, consumerID)
 	if err != nil {
-		return nil, 0, err
+		fmt.Printf("❌ [PRODUCT_REPO] Error counting products: %v\n", err)
+		return []models.Product{}, 0, err
+	}
+	fmt.Printf("🔍 [PRODUCT_REPO] Total products found: %d\n", total)
+
+	// Debug: Check which suppliers are linked
+	var linkedSuppliers []string
+	supplierCheckQuery := `SELECT supplier_id FROM consumer_links WHERE consumer_id = $1 AND status = 'approved'`
+	err = r.db.Select(&linkedSuppliers, supplierCheckQuery, consumerID)
+	if err != nil {
+		fmt.Printf("⚠️  [PRODUCT_REPO] Error getting linked suppliers: %v\n", err)
+	} else {
+		fmt.Printf("🔍 [PRODUCT_REPO] Linked supplier IDs: %v\n", linkedSuppliers)
+		// Check products for each supplier
+		for _, supplierID := range linkedSuppliers {
+			var supplierProductCount int
+			supplierProductQuery := `SELECT COUNT(*) FROM products WHERE supplier_id = $1`
+			err2 := r.db.Get(&supplierProductCount, supplierProductQuery, supplierID)
+			if err2 != nil {
+				fmt.Printf("⚠️  [PRODUCT_REPO] Error counting products for supplier %s: %v\n", supplierID, err2)
+			} else {
+				fmt.Printf("🔍 [PRODUCT_REPO] Supplier %s has %d products\n", supplierID, supplierProductCount)
+			}
+		}
+	}
+	
+	// Additional debug: Verify consumer exists in users table
+	var userEmail string
+	userCheckQuery := `SELECT email FROM users WHERE id = $1`
+	err = r.db.Get(&userEmail, userCheckQuery, consumerID)
+	if err != nil {
+		fmt.Printf("❌ [PRODUCT_REPO] Consumer ID %s NOT FOUND in users table: %v\n", consumerID, err)
+	} else {
+		fmt.Printf("✅ [PRODUCT_REPO] Consumer ID %s belongs to email: %s\n", consumerID, userEmail)
 	}
 
 	offset := (page - 1) * pageSize
@@ -102,7 +162,19 @@ func (r *ProductRepository) GetAllByConsumer(consumerID string, page, pageSize i
 		ORDER BY p.created_at DESC
 		LIMIT $2 OFFSET $3
 	`
+	fmt.Printf("🔍 [PRODUCT_REPO] Executing query with consumer_id=%s, limit=%d, offset=%d\n", consumerID, pageSize, offset)
 	err = r.db.Select(&products, selectQuery, consumerID, pageSize, offset)
+	if err != nil {
+		fmt.Printf("❌ [PRODUCT_REPO] Error selecting products: %v\n", err)
+		return []models.Product{}, 0, err
+	}
+	fmt.Printf("✅ [PRODUCT_REPO] Retrieved %d products\n", len(products))
+	
+	// Ensure we always return a non-nil slice
+	if products == nil {
+		products = []models.Product{}
+	}
+	
 	return products, total, err
 }
 
