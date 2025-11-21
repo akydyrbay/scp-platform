@@ -1,35 +1,10 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios'
+import { getAccessToken, getRefreshToken, setTokens, clearTokens } from '@/lib/utils/cookies'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api/v1'
 
-// Token storage keys
-const ACCESS_TOKEN_KEY = 'auth_token'
-const REFRESH_TOKEN_KEY = 'refresh_token'
-
-// Helper functions for token storage
-export function getAccessToken(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem(ACCESS_TOKEN_KEY)
-}
-
-export function getRefreshToken(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem(REFRESH_TOKEN_KEY)
-}
-
-export function setTokens(accessToken: string, refreshToken?: string): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
-  if (refreshToken) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
-  }
-}
-
-export function clearTokens(): void {
-  if (typeof window === 'undefined') return
-  localStorage.removeItem(ACCESS_TOKEN_KEY)
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
-}
+// Re-export cookie functions for backward compatibility
+export { getAccessToken, getRefreshToken, setTokens, clearTokens }
 
 // Refresh token function
 async function refreshAccessToken(): Promise<string | null> {
@@ -101,117 +76,135 @@ export function getClientApiClient(token?: string): AxiosInstance {
           return data
         }
         
-        // If data is a string, try to parse it
-        if (typeof data === 'string') {
-          // Remove any BOM or leading/trailing whitespace
-          let cleaned = data.trim().replace(/^\uFEFF/, '')
-          
-          // If empty, return empty object
-          if (!cleaned) {
-            return {}
-          }
-          
-          // Check content type
-          const contentType = headers?.['content-type'] || headers?.['Content-Type'] || ''
-          if (contentType && !contentType.includes('application/json')) {
-            // If not JSON content type, check if it's HTML
-            if (cleaned.includes('<!DOCTYPE') || cleaned.includes('<html')) {
-              console.error('Received HTML instead of JSON:', {
-                contentType,
-                preview: cleaned.substring(0, 200)
-              })
-              throw new Error('Server returned HTML instead of JSON. Please check if the backend API is running correctly.')
-            }
-          }
-          
-          // Try to parse JSON
-          try {
-            // Remove any trailing characters that might cause issues
-            // Find the last valid JSON character
-            let jsonEnd = cleaned.length
-            let braceCount = 0
-            let bracketCount = 0
-            let inString = false
-            let escapeNext = false
-            
-            for (let i = 0; i < cleaned.length; i++) {
-              const char = cleaned[i]
-              
-              if (escapeNext) {
-                escapeNext = false
-                continue
-              }
-              
-              if (char === '\\') {
-                escapeNext = true
-                continue
-              }
-              
-              if (char === '"') {
-                inString = !inString
-                continue
-              }
-              
-              if (inString) continue
-              
-              if (char === '{') braceCount++
-              if (char === '}') braceCount--
-              if (char === '[') bracketCount++
-              if (char === ']') bracketCount--
-              
-              // If we've closed all braces/brackets, this might be the end
-              if (braceCount === 0 && bracketCount === 0 && (char === '}' || char === ']')) {
-                jsonEnd = i + 1
-                break
-              }
-            }
-            
-            // Try parsing the cleaned JSON
-            const jsonString = cleaned.substring(0, jsonEnd)
-            return JSON.parse(jsonString)
-          } catch (e: any) {
-            // Log the error with context
-            const errorInfo: any = {
-              error: e.message,
-              errorPosition: e.message?.match(/position (\d+)/)?.[1],
-              dataPreview: cleaned.substring(0, 500),
-              dataLength: cleaned.length,
-              contentType
-            }
-            
-            // Try to find where the JSON ends
-            const jsonStart = cleaned.indexOf('{')
-            const jsonEnd = cleaned.lastIndexOf('}') + 1
-            if (jsonStart !== -1 && jsonEnd > jsonStart) {
-              errorInfo.jsonStart = jsonStart
-              errorInfo.jsonEnd = jsonEnd
-              errorInfo.afterJson = cleaned.substring(jsonEnd, Math.min(jsonEnd + 50, cleaned.length))
-            }
-            
-            console.error('JSON parse error in transformResponse:', errorInfo)
-            
-            // Try to extract valid JSON if possible
-            if (jsonStart !== -1 && jsonEnd > jsonStart) {
-              try {
-                const jsonString = cleaned.substring(jsonStart, jsonEnd)
-                const parsed = JSON.parse(jsonString)
-                console.log('Successfully extracted JSON from response')
-                return parsed
-              } catch (parseError) {
-                // If extraction fails, continue with original error
-              }
-            }
-            
-            // If it's a specific JSON parse error, provide better message
-            if (e.message?.includes('Unexpected') || e.message?.includes('JSON')) {
-              throw new Error(`Invalid JSON response from server: ${e.message}. Please check if the backend API is running correctly.`)
-            }
-            
-            throw e
+        // If data is not a string, return as is
+        if (typeof data !== 'string') {
+          return data
+        }
+        
+        // Remove any BOM or leading/trailing whitespace
+        let cleaned = data.trim().replace(/^\uFEFF/, '')
+        
+        // If empty, return empty object
+        if (!cleaned) {
+          return {}
+        }
+        
+        // Check content type
+        const contentType = headers?.['content-type'] || headers?.['Content-Type'] || ''
+        if (contentType && !contentType.includes('application/json')) {
+          // If not JSON content type, check if it's HTML
+          if (cleaned.includes('<!DOCTYPE') || cleaned.includes('<html')) {
+            console.error('Received HTML instead of JSON:', {
+              contentType,
+              preview: cleaned.substring(0, 200)
+            })
+            throw new Error('Server returned HTML instead of JSON. Please check if the backend API is running correctly.')
           }
         }
         
-        return data
+        // Try to parse JSON
+        try {
+          // Check if string looks like JSON before attempting parse
+          const trimmed = cleaned.trim()
+          if (!trimmed || (trimmed[0] !== '{' && trimmed[0] !== '[')) {
+            // Doesn't look like JSON, return empty object
+            console.warn('Response does not appear to be JSON, returning empty object', {
+              firstChar: trimmed[0] || '(empty)',
+              length: trimmed.length,
+              preview: trimmed.substring(0, 50)
+            })
+            return {}
+          }
+          
+          // Simple JSON parse first
+          return JSON.parse(cleaned)
+        } catch (e: any) {
+          // If simple parse fails, try to extract JSON from the string
+          const jsonStart = cleaned.indexOf('{')
+          const jsonEnd = cleaned.lastIndexOf('}') + 1
+          const arrayStart = cleaned.indexOf('[')
+          const arrayEnd = cleaned.lastIndexOf(']') + 1
+          
+          // Try to extract object JSON
+          if (jsonStart !== -1 && jsonEnd > jsonStart) {
+            try {
+              const jsonString = cleaned.substring(jsonStart, jsonEnd)
+              const parsed = JSON.parse(jsonString)
+              console.log('Successfully extracted JSON object from response')
+              return parsed
+            } catch (parseError) {
+              // Continue to try array
+            }
+          }
+          
+          // Try to extract array JSON
+          if (arrayStart !== -1 && arrayEnd > arrayStart) {
+            try {
+              const jsonString = cleaned.substring(arrayStart, arrayEnd)
+              const parsed = JSON.parse(jsonString)
+              console.log('Successfully extracted JSON array from response')
+              return parsed
+            } catch (parseError) {
+              // Continue to error handling
+            }
+          }
+          
+          // Log detailed error information with safe property access
+          let errorMessage = 'Unknown JSON parse error'
+          try {
+            if (e?.message) {
+              errorMessage = String(e.message)
+            } else if (e?.toString) {
+              errorMessage = e.toString()
+            } else {
+              errorMessage = String(e) || 'Unknown JSON parse error'
+            }
+          } catch {
+            errorMessage = 'Unknown JSON parse error (could not extract message)'
+          }
+          
+          // Build error info object with safe property access
+          const errorInfo: Record<string, any> = {
+            error: errorMessage,
+          }
+          
+          // Safely add error properties
+          if (e?.name) errorInfo.errorType = e.name
+          if (e?.code) errorInfo.code = e.code
+          
+          // Add data information
+          errorInfo.dataLength = cleaned.length
+          if (cleaned.length > 0) {
+            errorInfo.dataPreview = cleaned.substring(0, 200)
+          } else {
+            errorInfo.dataPreview = '(empty string)'
+          }
+          
+          errorInfo.contentType = contentType || 'unknown'
+          errorInfo.hasJsonStart = jsonStart !== -1
+          errorInfo.hasJsonEnd = jsonEnd > jsonStart
+          errorInfo.hasArrayStart = arrayStart !== -1
+          errorInfo.hasArrayEnd = arrayEnd > arrayStart
+          
+          // Only log if we have meaningful information
+          if (Object.keys(errorInfo).length > 1 || errorMessage !== 'Unknown JSON parse error') {
+            console.error('JSON parse error in transformResponse:', errorInfo)
+          } else {
+            console.error('JSON parse error in transformResponse (minimal error info available)', {
+              dataLength: cleaned.length,
+              contentType: contentType || 'unknown'
+            })
+          }
+          
+          // If it's a specific JSON parse error, provide better message
+          if (errorMessage.includes('Unexpected') || errorMessage.includes('JSON') || errorMessage.includes('parse')) {
+            throw new Error(`Invalid JSON response from server: ${errorMessage}. Please check if the backend API is running correctly.`)
+          }
+          
+          // Return empty object as fallback instead of throwing
+          console.warn('Returning empty object as fallback for unparseable response')
+          return {}
+        }
       }
     ],
   })
@@ -314,14 +307,71 @@ export function getClientApiClient(token?: string): AxiosInstance {
       }
 
       // Handle JSON parse errors (only if not already handled above)
-      if (error.message?.includes('JSON') || error.message?.includes('Unexpected') || error.message?.includes('Invalid JSON')) {
-        console.error('JSON parse error in response interceptor:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          headers: error.response?.headers,
-          url: originalRequest?.url || error.config?.url || 'unknown'
-        })
+      // Safely extract error message
+      let errorMessage = 'Unknown error'
+      try {
+        if (error?.message) {
+          errorMessage = String(error.message)
+        } else if (error?.toString) {
+          errorMessage = error.toString()
+        } else {
+          errorMessage = String(error)
+        }
+      } catch {
+        errorMessage = 'Unknown error (could not extract message)'
+      }
+      
+      const isJsonError = errorMessage.includes('JSON') || errorMessage.includes('Unexpected') || errorMessage.includes('Invalid JSON')
+      
+      if (isJsonError) {
+        // Build error info object with safe property access
+        const errorInfo: Record<string, any> = {
+          message: errorMessage,
+        }
+        
+        // Safely add error properties
+        if (error?.name) errorInfo.errorType = error.name
+        if (error?.code) errorInfo.code = error.code
+        if (error?.stack) errorInfo.stack = error.stack.substring(0, 200) // Limit stack trace
+        
+        // Add response info if available
+        if (error?.response) {
+          errorInfo.status = error.response.status
+          if (error.response.statusText) errorInfo.statusText = error.response.statusText
+          errorInfo.dataType = typeof error.response.data
+          
+          // Safely handle response data
+          try {
+            if (typeof error.response.data === 'string') {
+              errorInfo.dataPreview = error.response.data.substring(0, 200)
+              errorInfo.dataLength = error.response.data.length
+            } else {
+              errorInfo.data = error.response.data
+            }
+          } catch (e) {
+            errorInfo.dataError = 'Could not process response data'
+          }
+        }
+        
+        // Add request info if available
+        try {
+          if (originalRequest?.url) {
+            errorInfo.url = originalRequest.url
+            if (originalRequest.method) errorInfo.method = originalRequest.method
+          } else if (error?.config?.url) {
+            errorInfo.url = error.config.url
+            if (error.config.method) errorInfo.method = error.config.method
+          }
+        } catch (e) {
+          // Ignore errors when accessing request info
+        }
+        
+        // Only log if we have meaningful information
+        if (Object.keys(errorInfo).length > 1 || errorMessage !== 'Unknown error') {
+          console.error('JSON parse error in response interceptor:', errorInfo)
+        } else {
+          console.error('JSON parse error in response interceptor (minimal error info available)')
+        }
         
         // If response is HTML, it's likely an error page
         if (error.response?.data && typeof error.response.data === 'string') {
@@ -365,19 +415,22 @@ export function getClientApiClient(token?: string): AxiosInstance {
                 dataPreview: cleaned.substring(0, 500),
                 dataLength: cleaned.length
               })
-              return Promise.reject(new Error(`Invalid JSON response from server: ${error.message}. Please check if the backend API is running correctly.`))
+              return Promise.reject(new Error(`Invalid JSON response from server: ${errorMessage}. Please check if the backend API is running correctly.`))
             }
           } catch (parseError: any) {
+            const parseErrorMessage = parseError?.message || String(parseError) || 'Unknown parse error'
             console.error('Failed to extract JSON from error response:', {
-              parseError: parseError.message,
-              responsePreview: error.response.data.substring(0, 500)
+              parseError: parseErrorMessage,
+              responsePreview: typeof error.response?.data === 'string' 
+                ? error.response.data.substring(0, 500) 
+                : 'Non-string response data'
             })
             // If parsing still fails, return a more helpful error
-            return Promise.reject(new Error(`Invalid JSON response from server: ${error.message}. Please check if the backend API is running correctly.`))
+            return Promise.reject(new Error(`Invalid JSON response from server: ${errorMessage}. Please check if the backend API is running correctly.`))
           }
         } else {
           // For other JSON parsing issues, re-throw with a more generic message
-          return Promise.reject(new Error(`Invalid JSON response from server: ${error.message}. Please check if the backend API is running correctly.`))
+          return Promise.reject(new Error(`Invalid JSON response from server: ${errorMessage}. Please check if the backend API is running correctly.`))
         }
       }
 

@@ -21,6 +21,8 @@ export interface User {
   name: string
   email: string
   role: 'owner' | 'manager' | 'sales'
+  company_name?: string | null
+  supplier_id?: string | null
 }
 
 // Login request
@@ -62,6 +64,8 @@ function mapUser(backendUser: BackendUser): User {
     name,
     email: backendUser.email,
     role: mapRole(backendUser.role),
+    company_name: backendUser.company_name ?? null,
+    supplier_id: backendUser.supplier_id ?? null,
   }
 }
 
@@ -253,19 +257,29 @@ export async function logout(): Promise<void> {
   }
 }
 
-// Get current user (client-side)
-export async function getCurrentUser(token?: string): Promise<User | null> {
+// Get current user's full backend data (client-side)
+export async function getCurrentUserBackend(token?: string): Promise<BackendUser | null> {
   try {
     const client = token ? getClientApiClient(token) : getClientApiClient()
     const response = await client.get<BackendUser>('/auth/me')
-    return mapUser(response.data)
+    return response.data
   } catch (error: any) {
     // If 401, token is invalid - return null without redirecting
-    // Redirect will be handled by the component that calls this
     if (error.response?.status === 401) {
       return null
     }
     // For other errors, also return null
+    return null
+  }
+}
+
+// Get current user (client-side)
+export async function getCurrentUser(token?: string): Promise<User | null> {
+  try {
+    const backendUser = await getCurrentUserBackend(token)
+    if (!backendUser) return null
+    return mapUser(backendUser)
+  } catch (error: any) {
     return null
   }
 }

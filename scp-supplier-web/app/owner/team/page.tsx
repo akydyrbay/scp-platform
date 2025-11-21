@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getUsers, createUser, deleteUser, type User } from '@/lib/api/users'
+import { getCurrentSupplier } from '@/lib/api/suppliers'
+import { useAuthStore } from '@/lib/store/auth-store'
 
 const createUserSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -52,10 +54,13 @@ function mapRole(role: string): string {
 }
 
 export default function OwnerTeamPage() {
+  const { user } = useAuthStore()
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [supplierId, setSupplierId] = useState<string | null>(user?.supplier_id ?? null)
+  const [companyName, setCompanyName] = useState<string | null>(user?.company_name ?? null)
 
   const {
     register,
@@ -65,6 +70,32 @@ export default function OwnerTeamPage() {
   } = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema)
   })
+
+  useEffect(() => {
+    if (user?.supplier_id) {
+      setSupplierId(user.supplier_id)
+    }
+  }, [user?.supplier_id])
+
+  // Always load supplier info from backend using the auth cookie (JWT),
+  // then use supplier.name as the company name for all team members.
+  useEffect(() => {
+    const loadSupplierContext = async () => {
+      try {
+        const supplier = await getCurrentSupplier()
+        if (supplier?.id) {
+          setSupplierId(supplier.id)
+        }
+        if (supplier?.name) {
+          setCompanyName(supplier.name)
+        }
+      } catch (error) {
+        console.error('Failed to load supplier context:', error)
+      }
+    }
+
+    loadSupplierContext()
+  }, [])
 
   useEffect(() => {
     fetchUsers()
@@ -81,6 +112,18 @@ export default function OwnerTeamPage() {
 
       if (Array.isArray(data)) {
         setUsers(data)
+        if (!supplierId) {
+          const derivedSupplierId = data.find(member => member.supplier_id)?.supplier_id ?? null
+          if (derivedSupplierId) {
+            setSupplierId(derivedSupplierId)
+          }
+        }
+        if (!companyName) {
+          const derivedCompanyName = data.find(member => member.company_name)?.company_name ?? null
+          if (derivedCompanyName) {
+            setCompanyName(derivedCompanyName)
+          }
+        }
         if (data.length === 0) {
           console.warn('No users returned from API')
         }
@@ -98,13 +141,24 @@ export default function OwnerTeamPage() {
   }
 
   const onSubmit = async (data: CreateUserFormValues) => {
+    if (!supplierId) {
+      toast.error('Unable to determine your supplier account. Please refresh and try again.')
+      return
+    }
+    if (!companyName) {
+      toast.error('Unable to determine your company name. Please update your supplier profile and try again.')
+      return
+    }
+
     try {
       setIsCreating(true)
       console.log('Creating user with data:', data)
 
       const newUser = await createUser({
         ...data,
-        role: data.role as 'manager' | 'sales_rep'
+        role: data.role as 'manager' | 'sales_rep',
+        supplier_id: supplierId,
+        company_name: companyName
       })
 
       console.log('User created successfully:', newUser)

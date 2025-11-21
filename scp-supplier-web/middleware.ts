@@ -9,16 +9,22 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Allow login and signup pages - actual auth check happens in the page component
+  // Allow login and signup pages
   if (pathname.startsWith('/login') || pathname.startsWith('/signup')) {
     return NextResponse.next()
   }
 
-  // For protected routes, we'll check auth in the page/layout components
-  // since JWT token is stored in localStorage (client-side only)
-  // This middleware just ensures the route exists and handles redirects
+  // Check for authentication cookie on protected routes
   if (pathname.startsWith('/owner') || pathname.startsWith('/manager') || pathname.startsWith('/sales')) {
-    return NextResponse.next()
+    const authToken = request.cookies.get('auth_token')
+    
+    // If no auth token cookie exists, redirect to login
+    if (!authToken || !authToken.value) {
+      const loginUrl = new URL('/login', request.url)
+      // Add redirect parameter so user can return after login
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
   }
 
   return NextResponse.next()

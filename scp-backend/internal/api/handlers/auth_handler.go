@@ -101,12 +101,13 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 
 func (h *AuthHandler) CreateUser(c *gin.Context) {
 	var req struct {
-		Email     string  `json:"email" binding:"required,email"`
-		Password  string  `json:"password" binding:"required,min=8"`
-		FirstName *string `json:"first_name"`
-		LastName  *string `json:"last_name"`
-		Role      string  `json:"role" binding:"required,oneof=consumer owner manager sales_rep"`
-		SupplierID *string `json:"supplier_id"`
+		Email       string  `json:"email" binding:"required,email"`
+		Password    string  `json:"password" binding:"required,min=8"`
+		FirstName   *string `json:"first_name"`
+		LastName    *string `json:"last_name"`
+		CompanyName *string `json:"company_name"`
+		Role        string  `json:"role" binding:"required,oneof=consumer owner manager sales_rep"`
+		SupplierID  *string `json:"supplier_id"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -131,7 +132,8 @@ func (h *AuthHandler) CreateUser(c *gin.Context) {
 		Email:        req.Email,
 		PasswordHash: passwordHash,
 		FirstName:    req.FirstName,
-		LastName:      req.LastName,
+		LastName:     req.LastName,
+		CompanyName:  req.CompanyName,
 		Role:         req.Role,
 		SupplierID:   req.SupplierID,
 	}
@@ -235,4 +237,3 @@ func ParsePagination(c *gin.Context) (int, int) {
 
 	return page, pageSize
 }
-

@@ -19,6 +19,7 @@ export interface CreateUserRequest {
   password: string
   first_name?: string
   last_name?: string
+  company_name?: string
   role: 'owner' | 'manager' | 'sales_rep'
   supplier_id?: string
 }

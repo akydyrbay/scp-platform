@@ -56,14 +56,23 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     console.warn('Unexpected dashboard response format:', response.data)
     throw new Error('Invalid response format from dashboard API')
   } catch (error: any) {
-    console.error('Failed to fetch dashboard stats:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data
-    })
-    
+    const status = error?.response?.status
+
+    // If the endpoint doesn't exist yet, quietly fall back to default stats
+    if (status === 404) {
+      console.warn('Dashboard stats endpoint not found (404). Returning default stats.')
+      return {
+        total_orders: 0,
+        pending_orders: 0,
+        pending_link_requests: 0,
+        low_stock_items: 0,
+        recent_orders: [],
+        low_stock_products: []
+      }
+    }
+
     // Handle network errors
-    if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
+    if (error?.code === 'ECONNREFUSED' || error?.code === 'ERR_NETWORK') {
       console.error('Network error: Cannot connect to server')
       // Return default stats instead of throwing
       return {
@@ -77,7 +86,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }
     
     // Handle 500 errors gracefully
-    if (error.response?.status === 500) {
+    if (status === 500) {
       const errorMessage = error.response?.data?.error?.message || 'Server error occurred'
       console.error('Dashboard API error:', errorMessage)
       // Return default stats instead of throwing

@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { getCurrentUser } from './api/auth'
+import { getCurrentUser, logout } from './api/auth'
 import { useAuthStore } from './store/auth-store'
+import { isAuthenticated } from '@/lib/utils/cookies'
 import type { UserRole } from '@/types/auth'
 
 interface AuthGuardProps {
@@ -32,8 +33,36 @@ export function AuthGuard({ children, allowedRoles, redirectTo }: AuthGuardProps
 
     const checkAuth = async () => {
       try {
+        // First, check if auth cookie exists - if not, logout immediately
+        if (!isAuthenticated()) {
+          // Cookie was deleted, logout and redirect
+          const { setUser } = useAuthStore.getState()
+          setUser(null)
+          await logout()
+          if (!hasRedirectedRef.current) {
+            hasRedirectedRef.current = true
+            const redirect = redirectTo || '/login'
+            if (typeof window === 'undefined' || window.location.pathname !== '/login') {
+              router.replace(redirect)
+            }
+          }
+          return
+        }
+
         // If user is already in store, use it
         if (user) {
+          // Double-check cookie still exists
+          if (!isAuthenticated()) {
+            // Cookie was deleted while user was in store, logout
+            setUser(null)
+            await logout()
+            if (!hasRedirectedRef.current) {
+              hasRedirectedRef.current = true
+              router.replace(redirectTo || '/login')
+            }
+            return
+          }
+
           // Check role if specified
           if (allowedRoles && allowedRoles.length > 0) {
             if (!allowedRoles.includes(user.role)) {
@@ -101,6 +130,22 @@ export function AuthGuard({ children, allowedRoles, redirectTo }: AuthGuardProps
     }
 
     checkAuth()
+
+    // Set up periodic cookie check to detect if cookie was deleted
+    const cookieCheckInterval = setInterval(() => {
+      if (!isAuthenticated() && user) {
+        // Cookie was deleted, logout
+        setUser(null)
+        logout().then(() => {
+          router.replace('/login')
+        })
+      }
+    }, 2000) // Check every 2 seconds
+
+    // Cleanup interval on unmount
+    return () => {
+      clearInterval(cookieCheckInterval)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run once on mount
 
