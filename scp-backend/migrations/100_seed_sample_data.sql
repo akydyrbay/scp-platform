@@ -16,34 +16,16 @@ VALUES
   ('55555555-5555-5555-5555-555555555555', 'Beverage Solutions Inc.', 'Wide selection of beverages, juices, and soft drinks', 'sales@beveragesolutions.com', '+1-555-0505', '7890 Drink Avenue, Beverage City, BC 56789', 'Beverage Solutions Inc.', 'Beverage City HQ', '7890 Drink Avenue, Beverage City, BC 56789', 'USD', now())
 ON CONFLICT (id) DO NOTHING;
 
--- Users (owner, manager, consumer, sales_rep)
 INSERT INTO users (id, email, password_hash, first_name, last_name, company_name, phone_number, role, supplier_id, created_at)
 VALUES
-  -- Supplier 1 (Fresh Farm) users
-  ('a1111111-1111-1111-1111-111111111111', 'owner@freshfarm.com', crypt('password123', gen_salt('bf', 10)), 'John', 'Smith', 'Fresh Farm Produce Co.', '+1-555-1001', 'owner', '11111111-1111-1111-1111-111111111111', now()),
-  ('a2222222-2222-2222-2222-222222222222', 'manager@freshfarm.com', crypt('password123', gen_salt('bf', 10)), 'Sarah', 'Johnson', 'Fresh Farm Produce Co.', '+1-555-1002', 'manager', '11111111-1111-1111-1111-111111111111', now()),
-  ('a3333333-3333-3333-3333-333333333333', 'sales1@freshfarm.com', crypt('password123', gen_salt('bf', 10)), 'Mike', 'Williams', 'Fresh Farm Produce Co.', '+1-555-1003', 'sales_rep', '11111111-1111-1111-1111-111111111111', now()),
-  
-  -- Supplier 2 (Ocean Fresh) users
-  ('b1111111-1111-1111-1111-111111111111', 'owner@oceanfresh.com', crypt('password123', gen_salt('bf', 10)), 'David', 'Brown', 'Ocean Fresh Seafood', '+1-555-2001', 'owner', '22222222-2222-2222-2222-222222222222', now()),
-  ('b2222222-2222-2222-2222-222222222222', 'sales1@oceanfresh.com', crypt('password123', gen_salt('bf', 10)), 'Lisa', 'Davis', 'Ocean Fresh Seafood', '+1-555-2002', 'sales_rep', '22222222-2222-2222-2222-222222222222', now()),
-  
-  -- Supplier 3 (Premium Meats) users
-  ('c1111111-1111-1111-1111-111111111111', 'owner@premiummeats.com', crypt('password123', gen_salt('bf', 10)), 'Robert', 'Miller', 'Premium Meats & Poultry', '+1-555-3001', 'owner', '33333333-3333-3333-3333-333333333333', now()),
-  ('c2222222-2222-2222-2222-222222222222', 'manager@premiummeats.com', crypt('password123', gen_salt('bf', 10)), 'Emily', 'Wilson', 'Premium Meats & Poultry', '+1-555-3002', 'manager', '33333333-3333-3333-3333-333333333333', now()),
-  
-  -- Supplier 4 (Dairy Delights) users
-  ('d1111111-1111-1111-1111-111111111111', 'owner@dairydelights.com', crypt('password123', gen_salt('bf', 10)), 'Jennifer', 'Moore', 'Dairy Delights', '+1-555-4001', 'owner', '44444444-4444-4444-4444-444444444444', now()),
-  ('d2222222-2222-2222-2222-222222222222', 'sales1@dairydelights.com', crypt('password123', gen_salt('bf', 10)), 'James', 'Taylor', 'Dairy Delights', '+1-555-4002', 'sales_rep', '44444444-4444-4444-4444-444444444444', now()),
-  
-  -- Supplier 5 (Beverage Solutions) users
-  ('e1111111-1111-1111-1111-111111111111', 'owner@beveragesolutions.com', crypt('password123', gen_salt('bf', 10)), 'Patricia', 'Anderson', 'Beverage Solutions Inc.', '+1-555-5001', 'owner', '55555555-5555-5555-5555-555555555555', now()),
-  
-  -- Consumers (Restaurants/Hotels)
-  ('f1111111-1111-1111-1111-111111111111', 'chef@bistromodern.com', crypt('password123', gen_salt('bf', 10)), 'Chef', 'Martinez', 'Bistro Modern', '+1-555-6001', 'consumer', NULL, now()),
-  ('f2222222-2222-2222-2222-222222222222', 'manager@grandhotel.com', crypt('password123', gen_salt('bf', 10)), 'Thomas', 'Jackson', 'Grand Hotel', '+1-555-6002', 'consumer', NULL, now()),
-  ('f3333333-3333-3333-3333-333333333333', 'purchasing@cafedeluxe.com', crypt('password123', gen_salt('bf', 10)), 'Maria', 'Garcia', 'Cafe Deluxe', '+1-555-6003', 'consumer', NULL, now()),
-  ('f4444444-4444-4444-4444-444444444444', 'orders@steakhouse.com', crypt('password123', gen_salt('bf', 10)), 'William', 'White', 'Prime Steakhouse', '+1-555-6004', 'consumer', NULL, now())
+  -- Minimal supplier-side accounts for testing
+  -- Fresh Farm Produce Co. (single supplier used across the web app)
+  ('a1111111-1111-1111-1111-111111111111', 'owner@freshfarm.com',   crypt('password123', gen_salt('bf', 10)), 'John',   'Smith',    'Fresh Farm Produce Co.', '+1-555-1001', 'owner',    '11111111-1111-1111-1111-111111111111', now()),
+  ('a2222222-2222-2222-2222-222222222222', 'manager@freshfarm.com', crypt('password123', gen_salt('bf', 10)), 'Sarah',  'Johnson',  'Fresh Farm Produce Co.', '+1-555-1002', 'manager',  '11111111-1111-1111-1111-111111111111', now()),
+  ('a3333333-3333-3333-3333-333333333333', 'sales1@freshfarm.com',  crypt('password123', gen_salt('bf', 10)), 'Mike',   'Williams', 'Fresh Farm Produce Co.', '+1-555-1003', 'sales_rep','11111111-1111-1111-1111-111111111111', now()),
+
+  -- Single consumer account used for links, orders, chat, and complaints
+  ('f1111111-1111-1111-1111-111111111111', 'chef@bistromodern.com', crypt('password123', gen_salt('bf', 10)), 'Chef',   'Martinez', 'Bistro Modern',           '+1-555-6001', 'consumer', NULL,                                      now())
 ON CONFLICT (email) DO NOTHING;
 
 -- Products (minimal set per supplier for testing)
