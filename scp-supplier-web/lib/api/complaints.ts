@@ -53,6 +53,8 @@ export interface Message {
   sender_role: string
   content: string
   created_at: string
+  // Some backends may return "timestamp" instead of "created_at" – keep optional for compatibility.
+  timestamp?: string
 }
 
 /**

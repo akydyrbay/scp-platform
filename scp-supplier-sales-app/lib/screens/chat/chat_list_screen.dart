@@ -126,6 +126,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       conversationId: conversation.id,
                       supplierName: conversation.consumerName,
                       supplierLogoUrl: conversation.consumerAvatarUrl,
+                      consumerId: conversation.consumerId,
+                      orderId: conversation.orderId,
+                      orderNumber: conversation.orderNumber,
                     ),
                   ),
                 );

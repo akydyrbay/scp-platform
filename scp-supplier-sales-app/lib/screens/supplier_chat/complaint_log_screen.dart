@@ -6,6 +6,7 @@ import 'package:scp_mobile_shared/services/complaint_service.dart';
 /// Screen for logging a new complaint
 class ComplaintLogScreen extends StatefulWidget {
   final String consumerName;
+  final String consumerId;
   final String? orderId;
   final String? orderNumber;
   final String conversationId;
@@ -13,6 +14,7 @@ class ComplaintLogScreen extends StatefulWidget {
   const ComplaintLogScreen({
     super.key,
     required this.consumerName,
+    required this.consumerId,
     this.orderId,
     this.orderNumber,
     required this.conversationId,
@@ -45,24 +47,21 @@ class _ComplaintLogScreenState extends State<ComplaintLogScreen> {
       try {
         final complaint = await _complaintService.logComplaint(
           conversationId: widget.conversationId,
-          consumerId: widget.orderId ?? '', // Will be set from conversation context
+          consumerId: widget.consumerId,
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
           priority: _selectedPriority,
           orderId: widget.orderId,
         );
 
-        // Optionally escalate immediately after logging
-        if (_escalateToManager) {
-          await _complaintService.escalateComplaint(complaint.id);
-        }
+        // Always escalate to manager after logging from this screen
+        await _complaintService.escalateComplaint(complaint.id);
         
         if (mounted) {
-          final successMessage = _escalateToManager
-              ? 'Complaint logged and escalated to manager'
-              : 'Complaint logged successfully';
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(successMessage)),
+            const SnackBar(
+              content: Text('Complaint logged and escalated to manager'),
+            ),
           );
           // Return true so the caller (e.g. chat screen) can react to the escalation/logging
           Navigator.pop(context, true);
@@ -178,17 +177,17 @@ class _ComplaintLogScreenState extends State<ComplaintLogScreen> {
               }).toList(),
             ),
             const SizedBox(height: 24),
-            
-            // Escalate checkbox
-            CheckboxListTile(
-              title: const Text('Escalate to Manager'),
-              subtitle: const Text('Immediately forward to manager'),
-              value: _escalateToManager,
-              onChanged: (value) {
-                setState(() {
-                  _escalateToManager = value ?? false;
-                });
-              },
+            // Status / escalation info (read-only hint)
+            Text(
+              'Status on submit',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This complaint will be logged and escalated to a manager.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[700],
+                  ),
             ),
             const SizedBox(height: 32),
             
@@ -203,7 +202,7 @@ class _ComplaintLogScreenState extends State<ComplaintLogScreen> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Log Complaint'),
+                    : const Text('Escalate to manager'),
               ),
             ),
           ],

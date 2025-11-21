@@ -13,18 +13,25 @@ import '../../cubits/chat_sales_cubit.dart';
 import 'package:scp_mobile_shared/widgets/loading_indicator.dart';
 import 'package:scp_mobile_shared/models/message_model.dart';
 import 'package:scp_mobile_shared/config/app_config.dart';
+import '../supplier_chat/complaint_log_screen.dart';
 
 /// Chat message screen
 class ChatMessageScreen extends StatefulWidget {
   final String conversationId;
   final String supplierName;
   final String? supplierLogoUrl;
+  final String consumerId;
+  final String? orderId;
+  final String? orderNumber;
 
   const ChatMessageScreen({
     super.key,
     required this.conversationId,
     required this.supplierName,
     this.supplierLogoUrl,
+    required this.consumerId,
+    this.orderId,
+    this.orderNumber,
   });
 
   @override
@@ -317,6 +324,43 @@ class _ChatMessageScreenState extends State<ChatMessageScreen> {
           ),
           title: Text(widget.supplierName),
         ),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.warning_amber_outlined),
+            label: const Text('Escalate'),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () async {
+              final didSubmit = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ComplaintLogScreen(
+                    consumerName: widget.supplierName,
+                    consumerId: widget.consumerId,
+                    orderId: widget.orderId,
+                    orderNumber: widget.orderNumber,
+                    conversationId: widget.conversationId,
+                  ),
+                ),
+              );
+
+              if (didSubmit == true && mounted) {
+                // Reload messages so the escalation chat message from backend appears
+                await context
+                    .read<ChatSalesCubit>()
+                    .loadMessages(widget.conversationId);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Issue escalated to manager. Escalation note added to chat.',
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: BlocBuilder<ChatSalesCubit, ChatSalesState>(
         builder: (context, state) {

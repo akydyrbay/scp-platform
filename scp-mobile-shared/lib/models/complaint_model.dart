@@ -41,26 +41,33 @@ class ComplaintModel extends Equatable {
   });
 
   factory ComplaintModel.fromJson(Map<String, dynamic> json) {
+    // Support both old and new backend field names and handle missing optional fields safely.
+    final reportedAtRaw = json['reported_at'] ?? json['created_at'];
+    final resolvedAtRaw = json['resolved_at'];
+    final escalatedAtRaw = json['escalated_at'];
+
     return ComplaintModel(
       id: json['id'] as String,
       conversationId: json['conversation_id'] as String,
       consumerId: json['consumer_id'] as String,
-      consumerName: json['consumer_name'] as String,
+      consumerName: (json['consumer_name'] as String?) ?? 'Consumer',
       orderId: json['order_id'] as String?,
       orderNumber: json['order_number'] as String?,
       title: json['title'] as String,
       description: json['description'] as String,
       status: _parseStatus(json['status'] as String),
       priority: _parsePriority(json['priority'] as String),
-      reportedAt: DateTime.parse(json['reported_at'] as String),
-      resolvedAt: json['resolved_at'] != null
-          ? DateTime.parse(json['resolved_at'] as String)
+      reportedAt: reportedAtRaw != null
+          ? DateTime.parse(reportedAtRaw as String)
+          : DateTime.now(),
+      resolvedAt: resolvedAtRaw != null
+          ? DateTime.parse(resolvedAtRaw as String)
           : null,
       resolutionNotes: json['resolution_notes'] as String?,
       escalated: json['escalated'] as bool? ?? false,
       escalatedTo: json['escalated_to'] as String?,
-      escalatedAt: json['escalated_at'] != null
-          ? DateTime.parse(json['escalated_at'] as String)
+      escalatedAt: escalatedAtRaw != null
+          ? DateTime.parse(escalatedAtRaw as String)
           : null,
       attachments: (json['attachments'] as List<dynamic>?)
               ?.map((e) => e as String)

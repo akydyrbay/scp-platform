@@ -65,7 +65,7 @@ func main() {
 	productHandler := handlers.NewProductHandler(productRepo)
 	orderHandler := handlers.NewOrderHandler(orderService, orderRepo)
 	consumerHandler := handlers.NewConsumerHandler(supplierRepo, linkRepo, productRepo, orderService)
-	complaintHandler := handlers.NewComplaintHandler(complaintRepo)
+	complaintHandler := handlers.NewComplaintHandler(complaintRepo, conversationRepo, messageRepo)
 	chatHandler := handlers.NewChatHandler(conversationRepo, messageRepo)
 	notificationHandler := handlers.NewNotificationHandler(notificationRepo)
 	supplierHandler := handlers.NewSupplierHandler(supplierRepo)

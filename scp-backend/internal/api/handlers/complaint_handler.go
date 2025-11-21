@@ -10,12 +10,16 @@ import (
 )
 
 type ComplaintHandler struct {
-	complaintRepo *repository.ComplaintRepository
+	complaintRepo   *repository.ComplaintRepository
+	conversationRepo ConversationRepositoryInterface
+	messageRepo      MessageRepositoryInterface
 }
 
-func NewComplaintHandler(complaintRepo *repository.ComplaintRepository) *ComplaintHandler {
+func NewComplaintHandler(complaintRepo *repository.ComplaintRepository, conversationRepo ConversationRepositoryInterface, messageRepo MessageRepositoryInterface) *ComplaintHandler {
 	return &ComplaintHandler{
-		complaintRepo: complaintRepo,
+		complaintRepo:   complaintRepo,
+		conversationRepo: conversationRepo,
+		messageRepo:      messageRepo,
 	}
 }
 
@@ -110,6 +114,28 @@ func (h *ComplaintHandler) EscalateComplaint(c *gin.Context) {
 
 	if err := h.complaintRepo.Update(complaint); err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse(err.Error()))
+		return
+	}
+
+	// Also write a system-style message into the related conversation so that
+	// both web and mobile chat history clearly show the escalation event.
+	escalationMessage := &models.Message{
+		ConversationID: complaint.ConversationID,
+		SenderID:       salesRepID,
+		SenderRole:     "sales_rep",
+		Content:        "this problem escalated to manager",
+		AttachmentURL:  nil,
+		IsRead:         false,
+	}
+
+	if err := h.messageRepo.Create(escalationMessage); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse("Failed to record escalation message"))
+		return
+	}
+
+	// Update conversation metadata so UIs see the escalation as the latest activity.
+	if err := h.conversationRepo.UpdateLastMessage(complaint.ConversationID); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse("Failed to update conversation after escalation"))
 		return
 	}
 

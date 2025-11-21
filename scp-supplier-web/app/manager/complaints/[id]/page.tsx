@@ -62,6 +62,11 @@ function formatDate(dateString: string): string {
  */
 function generateHistory(complaint: Complaint, messages: Message[]): string[] {
   const history: string[] = []
+
+  const getMessageDateString = (msg: Message): string => {
+    // Prefer created_at but fall back to timestamp if that's what the API returned
+    return (msg.created_at || (msg as any).timestamp || '') as string
+  }
   
   // Add complaint creation
   history.push(`${formatDate(complaint.created_at)} · Complaint created`)
@@ -78,12 +83,13 @@ function generateHistory(complaint: Complaint, messages: Message[]): string[] {
   
   // Add recent messages as history entries
   const recentMessages = messages
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a, b) => new Date(getMessageDateString(b)).getTime() - new Date(getMessageDateString(a)).getTime())
     .slice(0, 5)
   
   for (const msg of recentMessages) {
+    const dateStr = getMessageDateString(msg)
     const role = msg.sender_role === 'consumer' ? 'Customer' : 'Sales Representative'
-    history.push(`${formatDate(msg.created_at)} · ${role}: ${msg.content.substring(0, 50)}${msg.content.length > 50 ? '...' : ''}`)
+    history.push(`${formatDate(dateStr)} · ${role}: ${msg.content.substring(0, 50)}${msg.content.length > 50 ? '...' : ''}`)
   }
   
   return history.reverse()

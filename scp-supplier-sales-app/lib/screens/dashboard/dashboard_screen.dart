@@ -220,6 +220,9 @@ class _SupplierDashboardScreenState extends State<SupplierDashboardScreen> {
                     conversationId: conv.id,
                     supplierName: conv.consumerName,
                     supplierLogoUrl: conv.consumerAvatarUrl,
+                    consumerId: conv.consumerId,
+                    orderId: conv.orderId,
+                    orderNumber: conv.orderNumber,
                   ),
                 ),
               );
