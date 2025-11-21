@@ -1,68 +1,375 @@
 import { getClientApiClient } from './client'
-import type { Product } from '../types'
 
-export interface CreateProductData {
+export interface Product {
+  id: string
   name: string
-  description?: string
-  imageUrl?: string
+  description?: string | null
+  image_url?: string | null
   unit: string
   price: number
-  discount?: number
-  stockLevel: number
-  minOrderQuantity: number
+  discount?: number | null
+  stock_level: number
+  min_order_quantity: number
+  supplier_id: string
+  created_at: string
+  updated_at?: string | null
 }
 
-export interface UpdateProductData extends Partial<CreateProductData> {}
-
-export interface BulkUpdateData {
-  productIds: string[]
-  updates: {
-    price?: number
-    stockLevel?: number
-    discount?: number
+export interface PaginatedProducts {
+  results: Product[]
+  pagination: {
+    page: number
+    page_size: number
+    total: number
+    total_pages: number
   }
 }
 
-export async function getProducts(token?: string): Promise<Product[]> {
-  const client = getClientApiClient(token)
-  // Backend returns paginated response: { results: [...], pagination: {...} }
-  const response = await client.get<{ results: Product[]; pagination: any }>('/supplier/products')
-  return response.data.results || []
+export interface CreateProductRequest {
+  name: string
+  description?: string
+  image_url?: string
+  unit: string
+  price: number
+  discount?: number
+  stock_level: number
+  min_order_quantity: number
 }
 
-export async function getProduct(productId: string, token?: string): Promise<Product> {
-  const client = getClientApiClient(token)
-  const response = await client.get<Product>(`/supplier/products/${productId}`)
-  return response.data
+export interface UpdateProductRequest {
+  name?: string
+  description?: string
+  image_url?: string
+  unit?: string
+  price?: number
+  discount?: number | null
+  stock_level?: number
+  min_order_quantity?: number
 }
 
-export async function createProduct(data: CreateProductData, token?: string): Promise<Product> {
-  const client = getClientApiClient(token)
-  const response = await client.post<Product>('/supplier/products', data)
-  return response.data
+export async function getProducts(page = 1, pageSize = 20): Promise<PaginatedProducts> {
+  const client = getClientApiClient()
+  
+  try {
+    const response = await client.get<PaginatedProducts>('/supplier/products', {
+      params: { page, page_size: pageSize },
+    })
+    
+    // Handle different response formats
+    if (response.data && 'results' in response.data) {
+      // Ensure results is always an array
+      return {
+        results: Array.isArray(response.data.results) ? response.data.results : [],
+        pagination: response.data.pagination || {
+          page,
+          page_size: pageSize,
+          total: 0,
+          total_pages: 0,
+        },
+      }
+    }
+    
+    // If response format is different (wrapped in success/data)
+    if (response.data && 'success' in response.data && (response.data as any).success) {
+      const data = (response.data as any).data
+      if (data && 'results' in data) {
+        return {
+          results: Array.isArray(data.results) ? data.results : [],
+          pagination: data.pagination || {
+            page,
+            page_size: pageSize,
+            total: 0,
+            total_pages: 0,
+          },
+        }
+      }
+    }
+    
+    // Return empty paginated response if format is unexpected
+    return {
+      results: [],
+      pagination: {
+        page,
+        page_size: pageSize,
+        total: 0,
+        total_pages: 0,
+      },
+    }
+  } catch (error: any) {
+    // Handle 500 errors gracefully
+    if (error.response?.status === 500) {
+      const errorMessage = error.response?.data?.error?.message || 'Server error occurred'
+      console.error('Products API error:', errorMessage)
+    } else {
+      console.error('Failed to fetch products:', error)
+    }
+    
+    // Return empty paginated response instead of throwing
+    return {
+      results: [],
+      pagination: {
+        page,
+        page_size: pageSize,
+        total: 0,
+        total_pages: 0,
+      },
+    }
+  }
 }
 
-export async function updateProduct(
-  productId: string,
-  data: UpdateProductData,
-  token?: string
-): Promise<Product> {
-  const client = getClientApiClient(token)
-  const response = await client.put<Product>(`/supplier/products/${productId}`, data)
-  return response.data
+export async function getProduct(id: string): Promise<Product> {
+  const client = getClientApiClient()
+  
+  // Log the API call for debugging
+  const apiUrl = `/supplier/products/${id}`
+  console.log('API call to:', apiUrl)
+  console.log('Product ID being requested:', id)
+  
+  try {
+    if (!id || id.trim() === '') {
+      throw new Error('Product ID is required')
+    }
+
+    const response = await client.get<Product | { success: boolean; data: Product }>(apiUrl)
+    
+    console.log('GetProduct API response:', {
+      status: response.status,
+      hasData: !!response.data,
+      dataType: typeof response.data,
+      dataKeys: response.data ? Object.keys(response.data) : []
+    })
+    
+    // Handle different response formats
+    if (response.data && typeof response.data === 'object') {
+      // Direct product format
+      if ('id' in response.data && 'name' in response.data) {
+        console.log('Product fetched successfully (direct format):', (response.data as Product).id)
+        return response.data as Product
+      }
+      
+      // Wrapped format (success/data)
+      if ('success' in response.data && 'data' in response.data) {
+        const wrappedData = (response.data as any).data
+        if (wrappedData && 'id' in wrappedData && 'name' in wrappedData) {
+          console.log('Product fetched successfully (wrapped format):', wrappedData.id)
+          return wrappedData as Product
+        }
+      }
+    }
+    
+    console.error('Unexpected response format:', response.data)
+    throw new Error('Invalid product response format from server')
+  } catch (error: any) {
+    // Handle JSON parse errors specifically
+    if (error.message?.includes('JSON') || error.message?.includes('Unexpected') || error.message?.includes('Invalid JSON')) {
+      console.error('JSON parse error in getProduct:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: apiUrl
+      })
+      
+      // Check if response is HTML
+      if (error.response?.data && typeof error.response.data === 'string') {
+        if (error.response.data.includes('<!DOCTYPE') || error.response.data.includes('<html')) {
+          throw new Error('Server returned an error page. Please check if the backend API is running correctly.')
+        }
+      }
+      
+      throw new Error(`Invalid JSON response from server: ${error.message}. Please check if the backend API is running correctly.`)
+    }
+    // Handle network errors
+    if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+      throw new Error('Cannot connect to server. Please check if the backend API is running.')
+    }
+    
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      throw new Error('Request timeout. Please try again later.')
+    }
+    
+    // Handle HTTP errors
+    if (error.response) {
+      const status = error.response.status
+      const errorData = error.response.data
+      const errorMessage = errorData?.error?.message || errorData?.message || 'Unknown error'
+      const requestUrl = error.config?.url || apiUrl
+      const requestMethod = error.config?.method?.toUpperCase() || 'GET'
+      
+      // Log detailed error information for debugging
+      // Ensure we log actual values, not undefined/null
+      const logData: Record<string, any> = {
+        status: status || 'unknown',
+        url: requestUrl || apiUrl,
+        method: requestMethod,
+        productId: id || 'unknown',
+      }
+      
+      // Only add errorData if it exists and has content
+      if (errorData && typeof errorData === 'object' && Object.keys(errorData).length > 0) {
+        logData.errorData = errorData
+      } else if (typeof errorData === 'string' && errorData.trim()) {
+        logData.errorData = errorData
+      }
+      
+      // Only add errorMessage if it exists and is different from default
+      if (errorMessage && errorMessage !== 'Unknown error') {
+        logData.errorMessage = errorMessage
+      }
+      
+      // Log the actual error object for full context
+      console.error('[getProduct] API Error Details:', logData)
+      console.error('[getProduct] Full error object:', {
+        message: error.message,
+        code: error.code,
+        response: {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          headers: error.response.headers,
+          data: error.response.data,
+        },
+        request: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers,
+        },
+      })
+      
+      if (status === 404) {
+        throw new Error(`Product not found (ID: ${id}). It may have been deleted or does not exist.`)
+      }
+      if (status === 403) {
+        throw new Error('You do not have permission to access this product. It may belong to a different supplier.')
+      }
+      if (status === 400) {
+        throw new Error(errorMessage || 'Invalid request. Please check the product ID.')
+      }
+      if (status === 500) {
+        throw new Error('Server error occurred. Please try again later.')
+      }
+      
+      throw new Error(errorMessage || `Failed to fetch product (${status})`)
+    }
+    
+    // Handle other errors
+    throw new Error(error.message || 'Failed to fetch product. Please try again.')
+  }
 }
 
-export async function deleteProduct(productId: string, token?: string): Promise<void> {
-  const client = getClientApiClient(token)
-  await client.delete(`/supplier/products/${productId}`)
+export async function createProduct(data: CreateProductRequest): Promise<Product> {
+  const client = getClientApiClient()
+  
+  try {
+    const response = await client.post<Product>('/supplier/products', data)
+    
+    // Handle different response formats
+    if (response.data && 'id' in response.data) {
+      return response.data
+    }
+    
+    // If response is wrapped in success/data
+    if (response.data && 'success' in response.data && (response.data as any).success) {
+      const product = (response.data as any).data
+      if (product && 'id' in product) {
+        return product
+      }
+    }
+    
+    throw new Error('Invalid product response format')
+  } catch (error: any) {
+    if (error.response?.status === 400) {
+      const message = error.response?.data?.error?.message || 'Invalid product data'
+      throw new Error(message)
+    }
+    if (error.response?.status === 500) {
+      const message = error.response?.data?.error?.message || 'Server error occurred'
+      throw new Error(message)
+    }
+    throw new Error(error.response?.data?.error?.message || error.message || 'Failed to create product')
+  }
 }
 
-export async function bulkUpdateProducts(
-  data: BulkUpdateData,
-  token?: string
-): Promise<Product[]> {
-  const client = getClientApiClient(token)
-  const response = await client.post<Product[]>('/supplier/products/bulk-update', data)
-  return response.data
+export async function updateProduct(id: string, data: UpdateProductRequest): Promise<Product> {
+  const client = getClientApiClient()
+  
+  try {
+    const response = await client.put<Product>(`/supplier/products/${id}`, data)
+    
+    // Handle different response formats
+    if (response.data && 'id' in response.data) {
+      return response.data
+    }
+    
+    // If response is wrapped in success/data
+    if (response.data && 'success' in response.data && (response.data as any).success) {
+      const product = (response.data as any).data
+      if (product && 'id' in product) {
+        return product
+      }
+    }
+    
+    throw new Error('Invalid product response format')
+  } catch (error: any) {
+    if (error.response?.status === 400) {
+      const message = error.response?.data?.error?.message || 'Invalid product data'
+      throw new Error(message)
+    }
+    if (error.response?.status === 404) {
+      throw new Error('Product not found')
+    }
+    if (error.response?.status === 500) {
+      const message = error.response?.data?.error?.message || 'Server error occurred'
+      throw new Error(message)
+    }
+    throw new Error(error.response?.data?.error?.message || error.message || 'Failed to update product')
+  }
+}
+
+export async function deleteProduct(id: string): Promise<void> {
+  const client = getClientApiClient()
+  const apiUrl = `/supplier/products/${id}`
+  
+  try {
+    if (!id || id.trim() === '') {
+      throw new Error('Product ID is required')
+    }
+
+    await client.delete(apiUrl)
+  } catch (error: any) {
+    // Handle network errors
+    if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+      throw new Error('Cannot connect to server. Please check if the backend API is running.')
+    }
+    
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      throw new Error('Request timeout. Please try again later.')
+    }
+    
+    // Handle HTTP errors
+    if (error.response) {
+      const status = error.response.status
+      const errorData = error.response.data
+      const errorMessage = errorData?.error?.message || errorData?.message || 'Unknown error'
+      
+      if (status === 404) {
+        throw new Error(`Product not found (ID: ${id}). It may have already been deleted.`)
+      }
+      if (status === 403) {
+        throw new Error('You do not have permission to delete this product. It may belong to a different supplier.')
+      }
+      if (status === 400) {
+        throw new Error(errorMessage || 'Invalid request. Please check the product ID.')
+      }
+      if (status === 500) {
+        throw new Error('Server error occurred while deleting the product. Please try again later.')
+      }
+      
+      throw new Error(errorMessage || `Failed to delete product (${status})`)
+    }
+    
+    // Handle other errors
+    throw new Error(error.message || 'Failed to delete product. Please try again.')
+  }
 }
 

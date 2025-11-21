@@ -6,6 +6,10 @@ CREATE TABLE IF NOT EXISTS suppliers (
     email VARCHAR(255) UNIQUE NOT NULL,
     phone_number VARCHAR(20),
     address TEXT,
+    legal_entity VARCHAR(255),
+    headquarters VARCHAR(255),
+    registered_address TEXT,
+    banking_currency VARCHAR(50),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP
 );

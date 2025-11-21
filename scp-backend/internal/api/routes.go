@@ -15,6 +15,7 @@ func SetupRoutes(
 	complaintHandler *handlers.ComplaintHandler,
 	chatHandler *handlers.ChatHandler,
 	notificationHandler *handlers.NotificationHandler,
+	supplierHandler *handlers.SupplierHandler,
 	jwtService *jwt.JWTService,
 	corsOrigins []string,
 ) *gin.Engine {
@@ -79,6 +80,9 @@ func SetupRoutes(
 		supplier.Use(middleware.AuthMiddleware(jwtService))
 		supplier.Use(middleware.RequireRole("owner", "manager", "sales_rep"))
 		{
+			// Supplier profile
+			supplier.GET("/me", supplierHandler.GetCurrentSupplier)
+
 			// Products
 			supplier.GET("/products", productHandler.GetProducts)
 			supplier.POST("/products", productHandler.CreateProduct)
@@ -87,6 +91,7 @@ func SetupRoutes(
 
 			// Orders
 			supplier.GET("/orders", orderHandler.GetSupplierOrders)
+			supplier.GET("/orders/:id", orderHandler.GetSupplierOrder)
 			supplier.POST("/orders/:id/accept", orderHandler.AcceptOrder)
 			supplier.POST("/orders/:id/reject", orderHandler.RejectOrder)
 
@@ -99,6 +104,7 @@ func SetupRoutes(
 			// Complaints
 			supplier.POST("/complaints", complaintHandler.CreateComplaint)
 			supplier.GET("/complaints", complaintHandler.GetComplaints)
+			supplier.GET("/complaints/:id", complaintHandler.GetComplaint)
 			supplier.POST("/complaints/:id/escalate", complaintHandler.EscalateComplaint)
 			supplier.POST("/complaints/:id/resolve", complaintHandler.ResolveComplaint)
 

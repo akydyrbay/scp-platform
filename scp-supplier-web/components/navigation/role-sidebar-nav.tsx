@@ -42,7 +42,7 @@ export function RoleSidebarNav ({ items }: RoleSidebarNavProps) {
     <nav className='flex flex-col gap-4'>
       {items.map(item => {
         const Icon = iconMap[item.icon]
-        const isActive = pathname?.startsWith(item.href) || false
+        const isActive = pathname.startsWith(item.href)
 
         return (
           <Link

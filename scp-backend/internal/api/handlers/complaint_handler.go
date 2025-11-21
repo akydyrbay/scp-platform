@@ -69,6 +69,30 @@ func (h *ComplaintHandler) GetComplaints(c *gin.Context) {
 	c.JSON(http.StatusOK, PaginatedResponse(complaints, page, pageSize, total))
 }
 
+// GetComplaint returns a single complaint by ID for the authenticated supplier.
+func (h *ComplaintHandler) GetComplaint(c *gin.Context) {
+	supplierID := c.GetString("supplier_id")
+	complaintID := c.Param("id")
+
+	if supplierID == "" {
+		c.JSON(http.StatusForbidden, ErrorResponse("Supplier ID required"))
+		return
+	}
+
+	complaint, err := h.complaintRepo.GetByID(complaintID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, ErrorResponse("Complaint not found"))
+		return
+	}
+
+	if complaint.SupplierID != supplierID {
+		c.JSON(http.StatusForbidden, ErrorResponse("Unauthorized"))
+		return
+	}
+
+	c.JSON(http.StatusOK, SuccessResponse(complaint))
+}
+
 func (h *ComplaintHandler) EscalateComplaint(c *gin.Context) {
 	complaintID := c.Param("id")
 	salesRepID := c.GetString("user_id")

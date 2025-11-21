@@ -103,18 +103,18 @@ func (h *ConsumerHandler) GetLinkedSuppliers(c *gin.Context) {
 		return
 	}
 
-	// Filter to only approved links
-	approvedLinks := []interface{}{}
+	// Filter to only accepted links
+	acceptedLinks := []interface{}{}
 	for _, link := range links {
-		if link.Status == "approved" {
+		if link.Status == "accepted" {
 			// Get supplier details
 			if supplier, err := h.supplierRepo.GetByID(link.SupplierID); err == nil {
-				approvedLinks = append(approvedLinks, supplier)
+				acceptedLinks = append(acceptedLinks, supplier)
 			}
 		}
 	}
 
-	c.JSON(http.StatusOK, PaginatedResponse(approvedLinks, page, pageSize, len(approvedLinks)))
+	c.JSON(http.StatusOK, PaginatedResponse(acceptedLinks, page, pageSize, len(acceptedLinks)))
 }
 
 func (h *ConsumerHandler) ApproveLink(c *gin.Context) {

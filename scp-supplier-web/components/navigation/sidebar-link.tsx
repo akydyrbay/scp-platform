@@ -28,3 +28,4 @@ export function SidebarLink ({ href, icon, label }: SidebarLinkProps) {
   )
 }
 
+

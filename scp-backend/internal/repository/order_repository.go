@@ -18,12 +18,14 @@ func NewOrderRepository(db *sqlx.DB) *OrderRepository {
 
 func (r *OrderRepository) GetByID(id string) (*models.Order, error) {
 	var order models.Order
-	// Join with suppliers table to get supplier name
+	// Join with suppliers and consumers to get display names
 	err := r.db.Get(&order, `
 		SELECT o.*,
-			COALESCE(s.name, '') as supplier_name
+			COALESCE(s.name, '') as supplier_name,
+			u.company_name as consumer_name
 		FROM orders o
 		LEFT JOIN suppliers s ON o.supplier_id = s.id
+		LEFT JOIN users u ON o.consumer_id = u.id
 		WHERE o.id = $1
 	`, id)
 	if err != nil {
@@ -72,8 +74,20 @@ func (r *OrderRepository) Create(order *models.Order) error {
 	order.Status = "pending"
 
 	_, err = tx.NamedExec(`
-		INSERT INTO orders (id, consumer_id, supplier_id, status, subtotal, tax, shipping_fee, total, created_at)
-		VALUES (:id, :consumer_id, :supplier_id, :status, :subtotal, :tax, :shipping_fee, :total, :created_at)
+		INSERT INTO orders (
+			id, consumer_id, supplier_id, status,
+			subtotal, tax, shipping_fee, total,
+			delivery_date, delivery_start_time, delivery_end_time,
+			notes, preferred_settlement,
+			created_at
+		)
+		VALUES (
+			:id, :consumer_id, :supplier_id, :status,
+			:subtotal, :tax, :shipping_fee, :total,
+			:delivery_date, :delivery_start_time, :delivery_end_time,
+			:notes, :preferred_settlement,
+			:created_at
+		)
 	`, order)
 	if err != nil {
 		return err
@@ -112,12 +126,14 @@ func (r *OrderRepository) GetByConsumerID(consumerID string, page, pageSize int)
 	}
 
 	offset := (page - 1) * pageSize
-	// Join with suppliers table to get supplier name
+	// Join with suppliers and consumers to get display names
 	err = r.db.Select(&orders, `
 		SELECT o.*,
-			COALESCE(s.name, '') as supplier_name
+			COALESCE(s.name, '') as supplier_name,
+			u.company_name as consumer_name
 		FROM orders o
 		LEFT JOIN suppliers s ON o.supplier_id = s.id
+		LEFT JOIN users u ON o.consumer_id = u.id
 		WHERE o.consumer_id = $1 
 		ORDER BY o.created_at DESC 
 		LIMIT $2 OFFSET $3
@@ -149,12 +165,14 @@ func (r *OrderRepository) GetBySupplierID(supplierID string, page, pageSize int)
 	}
 
 	offset := (page - 1) * pageSize
-	// Join with suppliers table to get supplier name
+	// Join with suppliers and consumers to get display names
 	err = r.db.Select(&orders, `
 		SELECT o.*,
-			COALESCE(s.name, '') as supplier_name
+			COALESCE(s.name, '') as supplier_name,
+			u.company_name as consumer_name
 		FROM orders o
 		LEFT JOIN suppliers s ON o.supplier_id = s.id
+		LEFT JOIN users u ON o.consumer_id = u.id
 		WHERE o.supplier_id = $1 
 		ORDER BY o.created_at DESC 
 		LIMIT $2 OFFSET $3
@@ -182,6 +200,11 @@ func (r *OrderRepository) Update(order *models.Order) error {
 	_, err := r.db.NamedExec(`
 		UPDATE orders SET
 			status = :status,
+			delivery_date = :delivery_date,
+			delivery_start_time = :delivery_start_time,
+			delivery_end_time = :delivery_end_time,
+			notes = :notes,
+			preferred_settlement = :preferred_settlement,
 			updated_at = :updated_at
 		WHERE id = :id
 	`, order)

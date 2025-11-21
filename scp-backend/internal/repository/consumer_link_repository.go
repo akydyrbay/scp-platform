@@ -103,7 +103,7 @@ func (r *ConsumerLinkRepository) Approve(id string) error {
 	now := time.Now()
 	_, err := r.db.Exec(`
 		UPDATE consumer_links 
-		SET status = 'approved', approved_at = $1
+		SET status = 'accepted', approved_at = $1
 		WHERE id = $2
 	`, now, id)
 	return err
@@ -122,7 +122,7 @@ func (r *ConsumerLinkRepository) Block(id string) error {
 	now := time.Now()
 	_, err := r.db.Exec(`
 		UPDATE consumer_links 
-		SET status = 'blocked', blocked_at = $1
+		SET status = 'cancelled', blocked_at = $1
 		WHERE id = $2
 	`, now, id)
 	return err

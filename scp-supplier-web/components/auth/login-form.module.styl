@@ -1,0 +1,98 @@
+card
+  width 100%
+  max-width 540px
+  padding 36px
+  border-radius 24px
+  border 1px solid rgba(255, 255, 255, 0.9)
+  background linear-gradient(180deg, #ffffff 0%, #f8faff 100%)
+  box-shadow 0 32px 60px rgba(15, 23, 42, 0.08)
+  color var(--foreground)
+
+header
+  text-align left
+  margin-bottom 28px
+
+badge
+  display inline-flex
+  padding 6px 14px
+  border-radius 999px
+  background-color var(--accent-soft)
+  color var(--accent)
+  font-size 12px
+  letter-spacing 0.1em
+  text-transform uppercase
+  margin-bottom 18px
+
+title
+  font-size 30px
+  font-weight 600
+  margin-bottom 10px
+
+subtitle
+  font-size 15px
+  color var(--muted)
+  max-width 420px
+
+form
+  display grid
+  gap 24px
+
+roleGrid
+  display grid
+  gap 14px
+
+roleCard
+  display grid
+  grid-template-columns 22px 1fr
+  gap 18px
+  align-items flex-start
+  padding 18px
+  border-radius 18px
+  border 1px solid var(--border)
+  background-color var(--surface)
+  cursor pointer
+  transition border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease
+
+roleCard:hover
+  border-color rgba(79, 70, 229, 0.4)
+  box-shadow 0 14px 30px rgba(79, 70, 229, 0.12)
+  transform translateY(-2px)
+
+radio
+  width 18px
+  height 18px
+  accent-color var(--accent)
+
+roleTitle
+  font-size 18px
+  font-weight 600
+  margin-bottom 6px
+  color var(--foreground)
+
+roleDescription
+  font-size 14px
+  color var(--muted)
+
+submit
+  width 100%
+  padding 14px 18px
+  border-radius 16px
+  background-image linear-gradient(135deg, #6366f1, #22d3ee)
+  font-weight 600
+  letter-spacing 0.1em
+  text-transform uppercase
+  color #ffffff
+  transition transform 0.15s ease, box-shadow 0.25s ease
+
+submit:hover
+  transform translateY(-1px)
+  box-shadow 0 18px 38px rgba(99, 102, 241, 0.28)
+
+submit:disabled
+  opacity 0.65
+  cursor progress
+
+@media (max-width: 640px)
+  card
+    padding 28px
+

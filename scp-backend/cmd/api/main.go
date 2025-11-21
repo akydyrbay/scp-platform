@@ -68,6 +68,7 @@ func main() {
 	complaintHandler := handlers.NewComplaintHandler(complaintRepo)
 	chatHandler := handlers.NewChatHandler(conversationRepo, messageRepo)
 	notificationHandler := handlers.NewNotificationHandler(notificationRepo)
+	supplierHandler := handlers.NewSupplierHandler(supplierRepo)
 	
 	// Create uploads directory for static file serving
 	uploadDir := "./uploads"
@@ -84,6 +85,7 @@ func main() {
 		complaintHandler,
 		chatHandler,
 		notificationHandler,
+		supplierHandler,
 		jwtService,
 		cfg.Server.CORSOrigins,
 	)

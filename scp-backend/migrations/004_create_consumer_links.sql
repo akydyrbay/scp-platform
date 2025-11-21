@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS consumer_links (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     consumer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     supplier_id UUID NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'blocked')),
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'completed', 'rejected', 'cancelled')),
     requested_at TIMESTAMP NOT NULL DEFAULT NOW(),
     approved_at TIMESTAMP,
     blocked_at TIMESTAMP,

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
-import { Providers } from './providers'
+import { ToasterProvider } from '@/components/providers/toaster-provider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -14,21 +14,21 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'SCP Supplier Portal',
-  description: 'Supplier management dashboard for SCP Platform',
+  title: 'B2B Supplier Management',
+  description: 'Role-based supplier management platform'
 }
 
-export default function RootLayout({
-  children,
-}: {
+export default function RootLayout ({
+  children
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang='en' suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <Providers>{children}</Providers>
+        <ToasterProvider />
+        {children}
       </body>
     </html>
   )
 }
-

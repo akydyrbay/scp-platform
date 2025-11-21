@@ -8,6 +8,11 @@ CREATE TABLE IF NOT EXISTS orders (
     tax DECIMAL(10, 2) NOT NULL DEFAULT 0 CHECK (tax >= 0),
     shipping_fee DECIMAL(10, 2) NOT NULL DEFAULT 0 CHECK (shipping_fee >= 0),
     total DECIMAL(10, 2) NOT NULL DEFAULT 0 CHECK (total >= 0),
+    delivery_date DATE,
+    delivery_start_time TIME,
+    delivery_end_time TIME,
+    notes TEXT,
+    preferred_settlement VARCHAR(255),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP
 );

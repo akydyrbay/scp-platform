@@ -60,11 +60,11 @@ func (r *ProductRepository) GetBySupplierAndConsumer(supplierID, consumerID stri
 	var products []models.Product
 	var total int
 
-	// Verify consumer-supplier link exists and is approved
+	// Verify consumer-supplier link exists and is accepted
 	query := `
 		SELECT COUNT(*) FROM products p
 		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
-		WHERE p.supplier_id = $1 AND cl.consumer_id = $2 AND cl.status = 'approved'
+		WHERE p.supplier_id = $1 AND cl.consumer_id = $2 AND cl.status = 'accepted'
 	`
 	err := r.db.Get(&total, query, supplierID, consumerID)
 	if err != nil {
@@ -76,7 +76,7 @@ func (r *ProductRepository) GetBySupplierAndConsumer(supplierID, consumerID stri
 		SELECT p.*, s.name as supplier_name FROM products p
 		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
 		INNER JOIN suppliers s ON p.supplier_id = s.id
-		WHERE p.supplier_id = $1 AND cl.consumer_id = $2 AND cl.status = 'approved'
+		WHERE p.supplier_id = $1 AND cl.consumer_id = $2 AND cl.status = 'accepted'
 		ORDER BY p.created_at DESC
 		LIMIT $3 OFFSET $4
 	`
@@ -99,9 +99,9 @@ func (r *ProductRepository) GetAllByConsumer(consumerID string, page, pageSize i
 	fmt.Printf("🔍 [PRODUCT_REPO] Consumer ID: %s\n", consumerID)
 	fmt.Printf("🔍 [PRODUCT_REPO] Page: %d, PageSize: %d\n", page, pageSize)
 
-	// First, check if consumer has any approved links
+	// First, check if consumer has any accepted links
 	var linkCount int
-	linkCheckQuery := `SELECT COUNT(*) FROM consumer_links WHERE consumer_id = $1 AND status = 'approved'`
+	linkCheckQuery := `SELECT COUNT(*) FROM consumer_links WHERE consumer_id = $1 AND status = 'accepted'`
 	err := r.db.Get(&linkCount, linkCheckQuery, consumerID)
 	if err != nil {
 		fmt.Printf("❌ [PRODUCT_REPO] Error checking consumer links: %v\n", err)
@@ -109,11 +109,11 @@ func (r *ProductRepository) GetAllByConsumer(consumerID string, page, pageSize i
 	}
 	fmt.Printf("🔍 [PRODUCT_REPO] Consumer has %d approved supplier links\n", linkCount)
 
-	// Get products from all approved linked suppliers for the consumer
+	// Get products from all accepted linked suppliers for the consumer
 	countQuery := `
 		SELECT COUNT(*) FROM products p
 		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
-		WHERE cl.consumer_id = $1 AND cl.status = 'approved'
+		WHERE cl.consumer_id = $1 AND cl.status = 'accepted'
 	`
 	err = r.db.Get(&total, countQuery, consumerID)
 	if err != nil {
@@ -124,7 +124,7 @@ func (r *ProductRepository) GetAllByConsumer(consumerID string, page, pageSize i
 
 	// Debug: Check which suppliers are linked
 	var linkedSuppliers []string
-	supplierCheckQuery := `SELECT supplier_id FROM consumer_links WHERE consumer_id = $1 AND status = 'approved'`
+	supplierCheckQuery := `SELECT supplier_id FROM consumer_links WHERE consumer_id = $1 AND status = 'accepted'`
 	err = r.db.Select(&linkedSuppliers, supplierCheckQuery, consumerID)
 	if err != nil {
 		fmt.Printf("⚠️  [PRODUCT_REPO] Error getting linked suppliers: %v\n", err)
@@ -158,7 +158,7 @@ func (r *ProductRepository) GetAllByConsumer(consumerID string, page, pageSize i
 		SELECT p.*, s.name as supplier_name FROM products p
 		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
 		INNER JOIN suppliers s ON p.supplier_id = s.id
-		WHERE cl.consumer_id = $1 AND cl.status = 'approved'
+		WHERE cl.consumer_id = $1 AND cl.status = 'accepted'
 		ORDER BY p.created_at DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -182,10 +182,14 @@ func (r *ProductRepository) Create(product *models.Product) error {
 	product.ID = uuid.New().String()
 	product.CreatedAt = time.Now()
 	_, err := r.db.NamedExec(`
-		INSERT INTO products (id, name, description, image_url, unit, price, discount,
-			stock_level, min_order_quantity, supplier_id, created_at)
-		VALUES (:id, :name, :description, :image_url, :unit, :price, :discount,
-			:stock_level, :min_order_quantity, :supplier_id, :created_at)
+		INSERT INTO products (
+			id, name, description, image_url, unit, price, discount,
+			stock_level, min_order_quantity, supplier_id, category, created_at
+		)
+		VALUES (
+			:id, :name, :description, :image_url, :unit, :price, :discount,
+			:stock_level, :min_order_quantity, :supplier_id, :category, :created_at
+		)
 	`, product)
 	return err
 }
@@ -203,6 +207,7 @@ func (r *ProductRepository) Update(product *models.Product) error {
 			discount = :discount,
 			stock_level = :stock_level,
 			min_order_quantity = :min_order_quantity,
+			category = :category,
 			updated_at = :updated_at
 		WHERE id = :id
 	`, product)

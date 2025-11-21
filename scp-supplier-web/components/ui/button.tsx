@@ -11,7 +11,7 @@ export function Button ({ className, variant = 'primary', ...props }: ButtonProp
     secondary: 'border border-neutral-200 bg-white hover:border-primary-200 text-neutral-600 hover:text-primary-500'
   }
 
-    return (
+  return (
     <button
       className={clsx(
         'inline-flex h-10 w-full items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-primary-200 disabled:cursor-not-allowed disabled:opacity-60',
@@ -20,5 +20,6 @@ export function Button ({ className, variant = 'primary', ...props }: ButtonProp
       )}
       {...props}
     />
-    )
-  }
+  )
+}
+

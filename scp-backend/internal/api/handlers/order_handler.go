@@ -89,6 +89,31 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, order)
 }
 
+// GetSupplierOrder returns order details for the authenticated supplier.
+// It ensures the order belongs to the supplier associated with the token.
+func (h *OrderHandler) GetSupplierOrder(c *gin.Context) {
+	orderID := c.Param("id")
+	supplierID := c.GetString("supplier_id")
+
+	if supplierID == "" {
+		c.JSON(http.StatusForbidden, ErrorResponse("Supplier ID required"))
+		return
+	}
+
+	order, err := h.orderRepo.GetByID(orderID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, ErrorResponse("Order not found"))
+		return
+	}
+
+	if order.SupplierID != supplierID {
+		c.JSON(http.StatusForbidden, ErrorResponse("Unauthorized"))
+		return
+	}
+
+	c.JSON(http.StatusOK, order)
+}
+
 func (h *OrderHandler) GetSupplierOrders(c *gin.Context) {
 	supplierID := c.GetString("supplier_id")
 	if supplierID == "" {

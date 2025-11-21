@@ -56,17 +56,17 @@ func main() {
 
 	// First, check existing links
 	var count int
-	err = db.Get(&count, "SELECT COUNT(*) FROM consumer_links WHERE consumer_id = $1 AND status = 'approved'", consumerID)
+	err = db.Get(&count, "SELECT COUNT(*) FROM consumer_links WHERE consumer_id = $1 AND status = 'accepted'", consumerID)
 	if err != nil {
 		log.Fatalf("Error checking links: %v", err)
 	}
 	fmt.Printf("📊 Found %d approved links\n", count)
 
-	// Update existing links to approved
+	// Update existing links to accepted
 	result, err := db.Exec(`
 		UPDATE consumer_links 
 		SET 
-			status = 'approved',
+			status = 'accepted',
 			approved_at = COALESCE(approved_at, NOW() - INTERVAL '29 days'),
 			requested_at = COALESCE(requested_at, NOW() - INTERVAL '30 days')
 		WHERE consumer_id = $1
@@ -82,10 +82,10 @@ func main() {
 	for i, supplierID := range supplierIDs {
 		_, err := db.Exec(`
 			INSERT INTO consumer_links (id, consumer_id, supplier_id, status, requested_at, approved_at)
-			VALUES ($1, $2, $3, 'approved', NOW() - INTERVAL '30 days', NOW() - INTERVAL '29 days')
+			VALUES ($1, $2, $3, 'accepted', NOW() - INTERVAL '30 days', NOW() - INTERVAL '29 days')
 			ON CONFLICT (consumer_id, supplier_id) DO UPDATE
 			SET 
-				status = 'approved',
+				status = 'accepted',
 				approved_at = EXCLUDED.approved_at,
 				requested_at = EXCLUDED.requested_at
 		`, linkIDs[i], consumerID, supplierID)
@@ -97,7 +97,7 @@ func main() {
 	}
 
 	// Verify final count
-	err = db.Get(&count, "SELECT COUNT(*) FROM consumer_links WHERE consumer_id = $1 AND status = 'approved'", consumerID)
+	err = db.Get(&count, "SELECT COUNT(*) FROM consumer_links WHERE consumer_id = $1 AND status = 'accepted'", consumerID)
 	if err != nil {
 		log.Fatalf("Error verifying links: %v", err)
 	}
@@ -106,7 +106,7 @@ func main() {
 	if count >= 3 {
 		fmt.Println("\n🎉 SUCCESS: Consumer links fixed! Products should now be visible.")
 	} else {
-		fmt.Printf("\n⚠️  WARNING: Expected 3 approved links, found %d\n", count)
+		fmt.Printf("\n⚠️  WARNING: Expected 3 accepted links, found %d\n", count)
 	}
 }
 
