@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { getOrder, type Order } from '@/lib/api/orders'
+import { getOrder, acceptOrder, rejectOrder, type Order } from '@/lib/api/orders'
 import toast from 'react-hot-toast'
 
 export default function ManagerOrderDetailPage() {
@@ -95,6 +95,90 @@ export default function ManagerOrderDetailPage() {
   const preferredSettlement = order?.preferred_settlement || 'Not specified'
   const notes = order?.notes || 'No special notes for this order'
 
+  // Map backend status to UI status
+  const orderStatus = useMemo(() => {
+    if (!order?.status) return 'Pending'
+    const statusMap: Record<string, string> = {
+      pending: 'Pending',
+      accepted: 'Accepted',
+      completed: 'Completed',
+      rejected: 'Rejected',
+      cancelled: 'Cancelled'
+    }
+    return statusMap[order.status.toLowerCase()] || order.status
+  }, [order?.status])
+
+  const isPending = order?.status?.toLowerCase() === 'pending'
+
+  // Status styles matching the orders list page
+  const statusStyles: Record<string, string> = {
+    Pending: 'border-sky-500 text-sky-600 bg-sky-50',
+    Accepted: 'border-amber-400 text-amber-500 bg-amber-50',
+    Completed: 'border-emerald-500 text-emerald-600 bg-emerald-50',
+    Rejected: 'border-rose-500 text-rose-500 bg-rose-50',
+    Cancelled: 'border-neutral-400 text-neutral-500 bg-neutral-50'
+  }
+
+  const handleAccept = async () => {
+    if (!order) return
+    try {
+      await acceptOrder(order.id)
+      toast.success('Order accepted successfully')
+      // Refresh order data
+      const updatedOrder = await getOrder(order.id)
+      setOrder(updatedOrder)
+      // Optionally redirect to orders list
+      // router.push('/manager/orders')
+    } catch (error: any) {
+      console.error('Failed to accept order:', error)
+      let errorMessage = 'Failed to accept order'
+      if (error.message) {
+        if (error.message.includes('not found')) {
+          errorMessage = 'Order not found'
+        } else if (error.message.includes('unauthorized')) {
+          errorMessage = 'You do not have permission to accept this order'
+        } else if (error.message.includes('cannot be accepted')) {
+          errorMessage = 'This order cannot be accepted (may already be processed)'
+        } else if (error.message.includes('insufficient stock')) {
+          errorMessage = 'Insufficient stock to fulfill this order'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      toast.error(errorMessage)
+    }
+  }
+
+  const handleReject = async () => {
+    if (!order) return
+    if (!confirm('Are you sure you want to reject this order?')) return
+    
+    try {
+      await rejectOrder(order.id)
+      toast.success('Order rejected successfully')
+      // Refresh order data
+      const updatedOrder = await getOrder(order.id)
+      setOrder(updatedOrder)
+      // Optionally redirect to orders list
+      // router.push('/manager/orders')
+    } catch (error: any) {
+      console.error('Failed to reject order:', error)
+      let errorMessage = 'Failed to reject order'
+      if (error.message) {
+        if (error.message.includes('not found')) {
+          errorMessage = 'Order not found'
+        } else if (error.message.includes('unauthorized')) {
+          errorMessage = 'You do not have permission to reject this order'
+        } else if (error.message.includes('cannot be rejected')) {
+          errorMessage = 'This order cannot be rejected (may already be processed)'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      toast.error(errorMessage)
+    }
+  }
+
   if (isLoading || !order) {
     return (
       <div className='flex items-center justify-center rounded-2xl border border-neutral-200 bg-white p-8 shadow-[0_30px_60px_rgba(15,23,42,0.08)]'>
@@ -156,9 +240,25 @@ export default function ManagerOrderDetailPage() {
         <p className='mt-2 text-sm text-neutral-600'>{notes}</p>
       </div>
 
-      <div className='flex flex-wrap gap-3'>
-        <button className='rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(16,185,129,0.25)] transition hover:bg-emerald-600'>Accept Order</button>
-        <button className='rounded-xl border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-500 transition hover:border-rose-400 hover:text-rose-600'>Reject Order</button>
+      <div className='flex flex-wrap items-center gap-3'>
+        {isPending ? (
+          <>
+            <button 
+              onClick={handleAccept}
+              className='rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(16,185,129,0.25)] transition hover:bg-emerald-600'>
+              Accept Order
+            </button>
+            <button 
+              onClick={handleReject}
+              className='rounded-xl border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-500 transition hover:border-rose-400 hover:text-rose-600'>
+              Reject Order
+            </button>
+          </>
+        ) : (
+          <span className={`inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold ${statusStyles[orderStatus] || statusStyles.Pending}`}>
+            {orderStatus}
+          </span>
+        )}
       </div>
     </div>
   )

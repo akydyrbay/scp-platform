@@ -103,6 +103,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		Discount        *float64 `json:"discount"`
 		StockLevel      int      `json:"stock_level" binding:"gte=0"`
 		MinOrderQuantity int     `json:"min_order_quantity" binding:"gte=1"`
+		Category        *string  `json:"category"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -124,6 +125,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		Discount:        req.Discount,
 		StockLevel:      req.StockLevel,
 		MinOrderQuantity: req.MinOrderQuantity,
+		Category:        req.Category,
 		SupplierID:      supplierID,
 	}
 
@@ -160,6 +162,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 		Discount        *float64 `json:"discount"`
 		StockLevel      *int     `json:"stock_level"`
 		MinOrderQuantity *int    `json:"min_order_quantity"`
+		Category        *string  `json:"category"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -194,6 +197,9 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 	}
 	if req.MinOrderQuantity != nil {
 		product.MinOrderQuantity = *req.MinOrderQuantity
+	}
+	if req.Category != nil {
+		product.Category = req.Category
 	}
 
 	if err := h.productRepo.Update(product); err != nil {

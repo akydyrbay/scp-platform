@@ -5,13 +5,6 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Image as ImageIcon, Check, CheckCheck } from 'lucide-react'
 
-import { complaintTickets } from '@/app/manager/complaints/page'
-
-const threads = complaintTickets.reduce<Record<string, typeof complaintTickets[number]>>((acc, ticket) => {
-  acc[ticket.id] = ticket
-  return acc
-}, {})
-
 const mockMessages = [
   { id: 1, author: 'client', timestamp: 'Nov 10 · 13:45', content: 'Could you confirm if the replacement shipment can leave today?', read: true },
   { id: 2, author: 'manager', timestamp: 'Nov 10 · 13:47', content: 'I am reviewing this now. Do you prefer delivery before 10AM?', read: true },
@@ -19,16 +12,17 @@ const mockMessages = [
   { id: 4, author: 'manager', timestamp: 'Nov 10 · 13:52', content: 'Noted. I will coordinate with logistics and get back shortly.', read: false }
 ] as const
 
-const groupedMessages = mockMessages.reduce<Record<string, typeof mockMessages>>( (acc, message) => {
+const groupedMessages = mockMessages.reduce<Record<string, typeof mockMessages[number][]>>(
+  (acc, message) => {
   const key = message.timestamp.split(' · ')[0]
   acc[key] = acc[key] ? [...acc[key], message] : [message]
   return acc
-}, {})
+  },
+  {}
+)
 
-const readIcon = {
-  true: <CheckCheck className='h-3 w-3' />,
-  false: <Check className='h-3 w-3' />
-}
+const readIcon = (read: boolean) =>
+  read ? <CheckCheck className='h-3 w-3' /> : <Check className='h-3 w-3' />
 
 export default function ManagerComplaintChatPage () {
   const params = useParams<{ id: string }>()
@@ -40,7 +34,11 @@ export default function ManagerComplaintChatPage () {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [])
 
-  const complaint = threads[params.id ?? ''] ?? complaintTickets[0]
+  // Hardcoded complaint details for the chat page to avoid backend dependencies
+  const complaint = {
+    id: params.id ?? 'C-001',
+    customer: 'Client Name'
+  }
 
   return (
     <div className='rounded-3xl border border-neutral-200 bg-[#f6f7fb] p-6 shadow-[0_30px_60px_rgba(15,23,42,0.08)]'>
@@ -95,7 +93,7 @@ export default function ManagerComplaintChatPage () {
                             <span className={message.author === 'manager' ? 'text-white/70' : 'text-neutral-400'}>{time}</span>
                             {message.author === 'manager' ? (
                               <span className={message.read ? 'text-white' : 'text-white/70'}>
-                                {readIcon[message.read]}
+                                {readIcon(message.read)}
                               </span>
                             ) : null}
                           </div>

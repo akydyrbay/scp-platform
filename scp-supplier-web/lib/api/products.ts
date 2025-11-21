@@ -11,6 +11,7 @@ export interface Product {
   stock_level: number
   min_order_quantity: number
   supplier_id: string
+  category?: string | null
   created_at: string
   updated_at?: string | null
 }
@@ -34,6 +35,7 @@ export interface CreateProductRequest {
   discount?: number
   stock_level: number
   min_order_quantity: number
+  category?: string
 }
 
 export interface UpdateProductRequest {
@@ -45,6 +47,7 @@ export interface UpdateProductRequest {
   discount?: number | null
   stock_level?: number
   min_order_quantity?: number
+  category?: string
 }
 
 export async function getProducts(page = 1, pageSize = 20): Promise<PaginatedProducts> {
@@ -55,11 +58,29 @@ export async function getProducts(page = 1, pageSize = 20): Promise<PaginatedPro
       params: { page, page_size: pageSize },
     })
     
+    console.log('[Products API] Raw response:', {
+      status: response.status,
+      hasData: !!response.data,
+      dataKeys: response.data ? Object.keys(response.data) : [],
+      dataType: typeof response.data,
+      dataPreview: JSON.stringify(response.data).substring(0, 500)
+    })
+    
     // Handle different response formats
     if (response.data && 'results' in response.data) {
       // Ensure results is always an array
+      const results = Array.isArray(response.data.results) ? response.data.results : []
+      console.log('[Products API] Parsed results:', {
+        count: results.length,
+        sample: results.slice(0, 2).map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          hasCategory: !!p.category
+        }))
+      })
       return {
-        results: Array.isArray(response.data.results) ? response.data.results : [],
+        results,
         pagination: response.data.pagination || {
           page,
           page_size: pageSize,
@@ -73,8 +94,13 @@ export async function getProducts(page = 1, pageSize = 20): Promise<PaginatedPro
     if (response.data && 'success' in response.data && (response.data as any).success) {
       const data = (response.data as any).data
       if (data && 'results' in data) {
+        const results = Array.isArray(data.results) ? data.results : []
+        console.log('[Products API] Parsed wrapped results:', {
+          count: results.length,
+          sample: results.slice(0, 2)
+        })
         return {
-          results: Array.isArray(data.results) ? data.results : [],
+          results,
           pagination: data.pagination || {
             page,
             page_size: pageSize,
@@ -85,7 +111,26 @@ export async function getProducts(page = 1, pageSize = 20): Promise<PaginatedPro
       }
     }
     
+    // Check if response.data is directly an array (some APIs return array directly)
+    if (Array.isArray(response.data)) {
+      const dataArray = response.data as Product[]
+      console.log('[Products API] Response is direct array:', {
+        count: dataArray.length,
+        sample: dataArray.slice(0, 2)
+      })
+      return {
+        results: dataArray,
+        pagination: {
+          page,
+          page_size: pageSize,
+          total: dataArray.length,
+          total_pages: 1,
+        },
+      }
+    }
+    
     // Return empty paginated response if format is unexpected
+    console.warn('[Products API] Unexpected response format:', response.data)
     return {
       results: [],
       pagination: {

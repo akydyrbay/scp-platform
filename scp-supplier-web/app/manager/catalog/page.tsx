@@ -28,26 +28,24 @@ type CatalogProduct = {
   image: string
 }
 
-// Extract category from description
+// Extract category from description (only if description contains category format)
+// This is a fallback - should prefer product.category from database
 function extractCategory(description: string | null | undefined): string {
   if (!description) return 'Uncategorized'
 
+  // Try [Category] format first
   const bracketMatch = description.match(/^\[([^\]]+)\]\s*(.*)$/)
   if (bracketMatch) {
     return bracketMatch[1].trim()
   }
 
-
+  // Try Category: format
   const colonMatch = description.match(/^([^:]+):\s*(.*)$/)
   if (colonMatch) {
     return colonMatch[1].trim()
   }
 
-
-  if (description.trim()) {
-    return description.trim()
-  }
-
+  // If no category format found, return 'Uncategorized' instead of the whole description
   return 'Uncategorized'
 }
 
@@ -60,8 +58,29 @@ function mapProductToUI(product: Product): CatalogProduct {
   // Draft: stock_level = 0, On Sale: stock_level > 0
   const status: ProductStatus = product.stock_level > 0 ? 'On Sale' : 'Draft'
 
-  // Prefer backend category when present, otherwise fall back to description-based extraction
-  const category = product.category || extractCategory(product.description)
+  // Always prefer backend category field from database
+  // Only use description extraction as last resort if category is truly missing
+  let category: string
+  if (product.category && product.category.trim()) {
+    category = product.category.trim()
+  } else {
+    // Fallback to description extraction only if category is missing
+    category = extractCategory(product.description)
+    // Debug: log when falling back to description extraction
+    console.warn(`[Catalog] Product "${product.name}" has no category field. Using fallback:`, {
+      productCategory: product.category,
+      extractedCategory: category,
+      description: product.description
+    })
+  }
+  
+  // Debug log for category mapping
+  if (product.name && product.category) {
+    console.log(`[Catalog] Product "${product.name}" category mapping:`, {
+      dbCategory: product.category,
+      mappedCategory: category
+    })
+  }
 
   // Generate SKU from product ID: take first 8 characters (without dashes) and convert to uppercase
   // Example: a1111111-1111-1111-1111-111111111111 -> SKU-A1111111
@@ -97,7 +116,30 @@ export default function ManagerCatalogPage() {
       try {
         setIsLoading(true)
         const data = await getProducts(1, 100)
-        setProducts(Array.isArray(data.results) ? data.results : [])
+        const productsList = Array.isArray(data.results) ? data.results : []
+        console.log('[Catalog] Fetched products:', {
+          total: productsList.length,
+          rawData: data,
+          hasResults: 'results' in data,
+          resultsType: typeof data.results,
+          resultsIsArray: Array.isArray(data.results),
+          sample: productsList.slice(0, 3).map(p => ({
+            name: p.name,
+            category: p.category,
+            stock_level: p.stock_level,
+            hasCategory: !!p.category
+          }))
+        })
+        
+        if (productsList.length === 0) {
+          console.warn('[Catalog] No products found!', {
+            dataKeys: Object.keys(data),
+            dataResults: data.results,
+            dataType: typeof data.results
+          })
+        }
+        
+        setProducts(productsList)
       } catch (error) {
         console.error('Failed to fetch products:', error)
 
@@ -123,18 +165,48 @@ export default function ManagerCatalogPage() {
 
   const uiProducts = useMemo(() => {
     if (!products || !Array.isArray(products)) {
+      console.log('[Catalog] No products or products is not an array:', products)
       return []
     }
-    return products.map(mapProductToUI)
+    const mapped = products.map(mapProductToUI)
+    console.log('[Catalog] Mapped products:', {
+      total: mapped.length,
+      categories: [...new Set(mapped.map(p => p.category))],
+      statuses: [...new Set(mapped.map(p => p.status))],
+      sample: mapped.slice(0, 3).map(p => ({ name: p.name, category: p.category, status: p.status }))
+    })
+    return mapped
   }, [products])
 
   const displayedProducts = useMemo(() => {
+    console.log('[Catalog] Filtering products:', {
+      totalProducts: uiProducts.length,
+      activeStatus,
+      activeCategory,
+      productsByStatus: {
+        'On Sale': uiProducts.filter(p => p.status === 'On Sale').length,
+        'Draft': uiProducts.filter(p => p.status === 'Draft').length
+      }
+    })
+    
     // Filter by status
     let filtered = uiProducts.filter(product => product.status === activeStatus)
+    console.log('[Catalog] After status filter:', filtered.length)
 
     // Then filter by category if not 'All'
     if (activeCategory !== 'All') {
-      filtered = filtered.filter(product => product.category === activeCategory)
+      filtered = filtered.filter(product => {
+        const matches = product.category === activeCategory
+        if (!matches) {
+          console.log('[Catalog] Category mismatch:', {
+            productCategory: product.category,
+            activeCategory,
+            productName: product.name
+          })
+        }
+        return matches
+      })
+      console.log('[Catalog] After category filter:', filtered.length)
     }
 
     return filtered
