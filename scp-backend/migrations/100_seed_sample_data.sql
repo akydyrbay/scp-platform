@@ -25,7 +25,8 @@ VALUES
   ('a3333333-3333-3333-3333-333333333333', 'sales1@freshfarm.com',  crypt('password123', gen_salt('bf', 10)), 'Mike',   'Williams', 'Fresh Farm Produce Co.', '+1-555-1003', 'sales_rep','11111111-1111-1111-1111-111111111111', now()),
 
   -- Single consumer account used for links, orders, chat, and complaints
-  ('f1111111-1111-1111-1111-111111111111', 'chef@bistromodern.com', crypt('password123', gen_salt('bf', 10)), 'Chef',   'Martinez', 'Bistro Modern',           '+1-555-6001', 'consumer', NULL,                                      now())
+  -- This matches the documented mobile test credentials: consumer@example.com / password123
+  ('f1111111-1111-1111-1111-111111111111', 'consumer@example.com', crypt('password123', gen_salt('bf', 10)), 'Test',   'Consumer', 'Test Consumer',           '+1-555-6001', 'consumer', NULL, now())
 ON CONFLICT (email) DO NOTHING;
 
 -- Products (minimal set per supplier for testing)

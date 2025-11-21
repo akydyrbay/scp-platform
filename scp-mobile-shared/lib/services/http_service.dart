@@ -331,8 +331,21 @@ class HttpService {
       print('Status Code: ${error.response?.statusCode}');
       print('Response Data: ${error.response?.data}');
       // Server responded with error
-      final message = error.response?.data['message'] ??
-          'An error occurred: ${error.response?.statusCode}';
+      final data = error.response?.data;
+      String message;
+      if (data is Map<String, dynamic>) {
+        if (data['message'] is String) {
+          message = data['message'] as String;
+        } else if (data['error'] is Map &&
+            (data['error'] as Map)['message'] is String) {
+          // Handle wrapped error objects like: { error: { message: '...' }, success: false }
+          message = (data['error'] as Map)['message'] as String;
+        } else {
+          message = 'An error occurred: ${error.response?.statusCode}';
+        }
+      } else {
+        message = 'An error occurred: ${error.response?.statusCode}';
+      }
       print('Error Message: $message');
       print('═══════════════════════════════════════');
       return message;

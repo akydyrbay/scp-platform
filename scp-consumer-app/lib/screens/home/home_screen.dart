@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../cubits/product_cubit.dart';
 import '../../cubits/cart_cubit.dart';
+import '../cart/cart_screen.dart';
 import 'package:scp_mobile_shared/widgets/product_card.dart';
 import 'package:scp_mobile_shared/widgets/loading_indicator.dart';
 import 'package:scp_mobile_shared/widgets/error_widget.dart';
@@ -54,6 +55,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.shopping_cart),
             onPressed: () {
               // Navigate to cart
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const CartScreen(),
+                ),
+              );
             },
           ),
           // Debug button - refresh products

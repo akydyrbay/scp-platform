@@ -29,6 +29,7 @@ class _ComplaintLogScreenState extends State<ComplaintLogScreen> {
   final _complaintService = ComplaintService();
   ComplaintPriority _selectedPriority = ComplaintPriority.medium;
   bool _isSubmitting = false;
+  bool _escalateToManager = false;
 
   @override
   void dispose() {
@@ -42,7 +43,7 @@ class _ComplaintLogScreenState extends State<ComplaintLogScreen> {
       setState(() => _isSubmitting = true);
       
       try {
-        await _complaintService.logComplaint(
+        final complaint = await _complaintService.logComplaint(
           conversationId: widget.conversationId,
           consumerId: widget.orderId ?? '', // Will be set from conversation context
           title: _titleController.text.trim(),
@@ -50,11 +51,20 @@ class _ComplaintLogScreenState extends State<ComplaintLogScreen> {
           priority: _selectedPriority,
           orderId: widget.orderId,
         );
+
+        // Optionally escalate immediately after logging
+        if (_escalateToManager) {
+          await _complaintService.escalateComplaint(complaint.id);
+        }
         
         if (mounted) {
+          final successMessage = _escalateToManager
+              ? 'Complaint logged and escalated to manager'
+              : 'Complaint logged successfully';
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Complaint logged successfully')),
+            SnackBar(content: Text(successMessage)),
           );
+          // Return true so the caller (e.g. chat screen) can react to the escalation/logging
           Navigator.pop(context, true);
         }
       } catch (e) {
@@ -173,9 +183,11 @@ class _ComplaintLogScreenState extends State<ComplaintLogScreen> {
             CheckboxListTile(
               title: const Text('Escalate to Manager'),
               subtitle: const Text('Immediately forward to manager'),
-              value: false,
+              value: _escalateToManager,
               onChanged: (value) {
-                // Handle escalate toggle
+                setState(() {
+                  _escalateToManager = value ?? false;
+                });
               },
             ),
             const SizedBox(height: 32),

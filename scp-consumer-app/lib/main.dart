@@ -20,6 +20,7 @@ import 'cubits/notification_cubit.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/order/orders_screen.dart';
+import 'screens/checkout/checkout_screen.dart';
 import 'screens/chat/chat_list_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/supplier/supplier_discovery_screen.dart';
@@ -122,7 +123,7 @@ class SCPConsumerApp extends StatelessWidget {
           create: (context) => ChatCubit(),
         ),
         BlocProvider(
-          create: (context) => CartCubit(),
+          create: (context) => CartCubit()..loadCart(),
         ),
         BlocProvider(
           create: (context) => NotificationCubit(),
@@ -146,6 +147,9 @@ class SCPConsumerApp extends StatelessWidget {
           Locale('kk', ''), // Kazakh
         ],
         
+        routes: {
+          '/checkout': (context) => const CheckoutScreen(),
+        },
         home: BlocBuilder<AuthCubit, AuthState>(
           builder: (context, state) {
             // Show loading screen while checking auth status

@@ -6,6 +6,7 @@ import '../../cubits/chat_sales_cubit.dart';
 import '../../cubits/auth_cubit.dart';
 import 'package:scp_mobile_shared/models/message_model.dart';
 import 'package:scp_mobile_shared/config/app_theme_supplier.dart';
+import 'complaint_log_screen.dart';
 
 /// Enhanced chat screen for supplier sales reps with canned replies
 class SupplierChatScreen extends StatefulWidget {
@@ -111,12 +112,40 @@ class _SupplierChatScreenState extends State<SupplierChatScreen> {
           title: Text(widget.consumerName),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.warning_amber_outlined),
-            onPressed: () {
-              // Show escalate complaint dialog
-            },
-            tooltip: 'Escalate to Manager',
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: AppThemeSupplier.priorityUrgent,
+              ),
+              icon: const Icon(Icons.warning_amber_outlined),
+              label: const Text('Escalate to Manager'),
+              onPressed: () async {
+                // Navigate to complaint escalation/logging form while preserving chat context
+                final didSubmit = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ComplaintLogScreen(
+                      consumerName: widget.consumerName,
+                      orderId: widget.orderId,
+                      orderNumber: null,
+                      conversationId: widget.conversationId,
+                    ),
+                  ),
+                );
+
+                // Show a lightweight confirmation in chat after returning
+                if (didSubmit == true && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Issue has been sent to a manager. They will be notified about this escalation.',
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
           ),
         ],
       ),
