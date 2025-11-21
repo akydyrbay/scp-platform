@@ -32,12 +32,6 @@ type OrderItemRequest struct {
 }
 
 func (s *OrderService) CreateOrder(consumerID string, req CreateOrderRequest) (*models.Order, error) {
-	// // Verify consumer-supplier link
-	// link, err := s.linkRepo.GetByConsumerAndSupplier(consumerID, req.SupplierID)
-	// if err != nil || link.Status != "approved" || link.Status != "accepted" {
-	// 	return nil, fmt.Errorf("supplier link not approved")
-	// }
-
 	// Calculate totals
 	var subtotal float64
 	var orderItems []models.OrderItem

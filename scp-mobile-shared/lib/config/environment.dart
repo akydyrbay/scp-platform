@@ -10,7 +10,8 @@ enum AppEnvironment {
 
 /// Environment configuration manager
 class EnvironmentConfig {
-  static AppEnvironment _environment = AppEnvironment.production;
+  // Default to development so local runs talk to the local backend by default.
+  static AppEnvironment _environment = AppEnvironment.development;
   static bool _initialized = false;
 
   /// Initialize environment from build-time constants
@@ -18,7 +19,8 @@ class EnvironmentConfig {
   static void initialize() {
     if (_initialized) return;
 
-    const env = String.fromEnvironment('ENV', defaultValue: 'production');
+    // Default ENV to "development" so local runs (without dart-define) use localhost:3000.
+    const env = String.fromEnvironment('ENV', defaultValue: 'development');
     _environment = _parseEnvironment(env);
     _initialized = true;
   }
