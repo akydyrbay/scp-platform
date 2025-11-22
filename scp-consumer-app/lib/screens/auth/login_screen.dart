@@ -16,12 +16,19 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _companyNameController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isSignup = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _companyNameController.dispose();
     super.dispose();
   }
 
@@ -31,6 +38,46 @@ class _LoginScreenState extends State<LoginScreen> {
             _emailController.text.trim(),
             _passwordController.text,
           );
+    }
+  }
+
+  void _handleSignup() async {
+    if (_formKey.currentState!.validate()) {
+      final message = await context.read<AuthCubit>().signup(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+            firstName: _firstNameController.text.trim().isEmpty 
+                ? null 
+                : _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim().isEmpty 
+                ? null 
+                : _lastNameController.text.trim(),
+            companyName: _companyNameController.text.trim().isEmpty 
+                ? null 
+                : _companyNameController.text.trim(),
+          );
+      
+      if (message != null && mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppTheme.successColor,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        
+        // Clear form and switch to login mode
+        setState(() {
+          _isSignup = false;
+          _formKey.currentState?.reset();
+          _emailController.clear();
+          _passwordController.clear();
+          _firstNameController.clear();
+          _lastNameController.clear();
+          _companyNameController.clear();
+        });
+      }
     }
   }
 
@@ -78,13 +125,52 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Welcome back',
+                      _isSignup ? 'Create your account' : 'Welcome back',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: AppTheme.textSecondary,
                           ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 32),
+                    // Toggle between login and signup
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isSignup = false;
+                              _formKey.currentState?.reset();
+                            });
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: !_isSignup 
+                                ? AppTheme.primaryColor 
+                                : AppTheme.textSecondary,
+                          ),
+                          child: const Text('Login'),
+                        ),
+                        Text(
+                          '|',
+                          style: TextStyle(color: AppTheme.textSecondary),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isSignup = true;
+                              _formKey.currentState?.reset();
+                            });
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: _isSignup 
+                                ? AppTheme.primaryColor 
+                                : AppTheme.textSecondary,
+                          ),
+                          child: const Text('Sign Up'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
                     // Email field
                     TextFormField(
                       controller: _emailController,
@@ -97,6 +183,39 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: AppValidators.validateEmail,
                     ),
                     const SizedBox(height: 16),
+                    // First name field (signup only)
+                    if (_isSignup)
+                      TextFormField(
+                        controller: _firstNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'First Name (Optional)',
+                          hintText: 'Enter your first name',
+                          prefixIcon: Icon(Icons.person_outlined),
+                        ),
+                      ),
+                    if (_isSignup) const SizedBox(height: 16),
+                    // Last name field (signup only)
+                    if (_isSignup)
+                      TextFormField(
+                        controller: _lastNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Last Name (Optional)',
+                          hintText: 'Enter your last name',
+                          prefixIcon: Icon(Icons.person_outlined),
+                        ),
+                      ),
+                    if (_isSignup) const SizedBox(height: 16),
+                    // Company name field (signup only)
+                    if (_isSignup)
+                      TextFormField(
+                        controller: _companyNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Company Name (Optional)',
+                          hintText: 'Enter your company name',
+                          prefixIcon: Icon(Icons.business_outlined),
+                        ),
+                      ),
+                    if (_isSignup) const SizedBox(height: 16),
                     // Password field
                     TextFormField(
                       controller: _passwordController,
@@ -118,7 +237,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
                       ),
-                      validator: AppValidators.validatePassword,
+                      validator: _isSignup
+                          ? (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Password is required';
+                              }
+                              if (value.length < 8) {
+                                return 'Password must be at least 8 characters';
+                              }
+                              return null;
+                            }
+                          : AppValidators.validatePassword,
                     ),
                     const SizedBox(height: 8),
                     // Forgot password
@@ -139,18 +268,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // Login button
+                    // Login/Signup button
                     SizedBox(
                       height: 48,
                       child: ElevatedButton(
-                        onPressed: state.isLoading ? null : _handleLogin,
+                        onPressed: state.isLoading 
+                            ? null 
+                            : (_isSignup ? _handleSignup : _handleLogin),
                         child: state.isLoading
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Login'),
+                            : Text(_isSignup ? 'Sign Up' : 'Login'),
                       ),
                     ),
                     const SizedBox(height: 32),

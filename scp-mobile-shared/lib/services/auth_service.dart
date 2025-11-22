@@ -45,6 +45,37 @@ class AuthService {
     }
   }
 
+  /// Signup user (consumer only) - returns success message, does not auto-login
+  Future<String> signup({
+    required String email,
+    required String password,
+    String? firstName,
+    String? lastName,
+    String? companyName,
+  }) async {
+    try {
+      final response = await _httpService.post(
+        '/auth/signup',
+        data: {
+          'email': email,
+          'password': password,
+          if (firstName != null && firstName.isNotEmpty) 'first_name': firstName,
+          if (lastName != null && lastName.isNotEmpty) 'last_name': lastName,
+          if (companyName != null && companyName.isNotEmpty) 'company_name': companyName,
+        },
+      );
+
+      // Extract success message from response
+      final responseData = response.data as Map<String, dynamic>;
+      final data = responseData['data'] as Map<String, dynamic>?;
+      final message = data?['message'] as String? ?? 'Account created successfully. You can now login with your credentials.';
+      
+      return message;
+    } catch (e) {
+      throw Exception('Signup failed: $e');
+    }
+  }
+
   /// Logout user
   Future<void> logout() async {
     try {

@@ -17,7 +17,7 @@ class SupplierService {
   }) async {
     try {
       final response = await _httpService.get(
-        '/suppliers/discover',
+        '/consumer/suppliers',
         queryParameters: {
           'page': page,
           'page_size': pageSize,
@@ -64,7 +64,7 @@ class SupplierService {
   }) async {
     try {
       final response = await _httpService.post(
-        '/suppliers/$supplierId/link-request',
+        '/consumer/suppliers/$supplierId/link-request',
         data: {
           if (message != null) 'message': message,
         },
@@ -75,7 +75,24 @@ class SupplierService {
       final Map<String, dynamic> linkData = (payload is Map && payload['data'] != null)
           ? payload['data'] as Map<String, dynamic>
           : payload as Map<String, dynamic>;
-      return LinkRequest.fromJson(linkData);
+      
+      // Convert ConsumerLink format to LinkRequest format
+      final Map<String, dynamic> linkRequestData = {
+        'id': linkData['id'] as String,
+        'supplier_id': linkData['supplier_id'] as String,
+        'supplier_name': linkData['supplier'] != null 
+            ? (linkData['supplier'] as Map<String, dynamic>)['name'] as String?
+            : null,
+        'supplier_logo_url': linkData['supplier'] != null 
+            ? (linkData['supplier'] as Map<String, dynamic>)['logo_url'] as String?
+            : null,
+        'status': linkData['status'] as String,
+        'message': message,
+        'requested_at': linkData['requested_at'] as String,
+        'responded_at': linkData['approved_at'] as String?,
+      };
+      
+      return LinkRequest.fromJson(linkRequestData);
     } catch (e) {
       throw Exception('Failed to send link request: $e');
     }

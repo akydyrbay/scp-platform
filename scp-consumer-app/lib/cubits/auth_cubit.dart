@@ -153,6 +153,38 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
+  /// Signup - does not auto-login, returns success message
+  Future<String?> signup({
+    required String email,
+    required String password,
+    String? firstName,
+    String? lastName,
+    String? companyName,
+  }) async {
+    emit(state.copyWith(isLoading: true, error: null));
+
+    try {
+      final message = await _authService.signup(
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        companyName: companyName,
+      );
+      emit(state.copyWith(
+        isLoading: false,
+        error: null,
+      ));
+      return message;
+    } catch (e) {
+      emit(state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      ));
+      return null;
+    }
+  }
+
   /// Logout
   Future<void> logout() async {
     emit(state.copyWith(isLoading: true));

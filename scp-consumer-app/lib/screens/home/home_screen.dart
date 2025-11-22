@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../cubits/product_cubit.dart';
-import '../../cubits/cart_cubit.dart';
-import '../cart/cart_screen.dart';
-import 'package:scp_mobile_shared/widgets/product_card.dart';
+import '../../cubits/supplier_cubit.dart';
+import '../supplier/supplier_products_screen.dart';
 import 'package:scp_mobile_shared/widgets/loading_indicator.dart';
 import 'package:scp_mobile_shared/widgets/error_widget.dart';
 import 'package:scp_mobile_shared/widgets/empty_state_widget.dart';
+import 'package:scp_mobile_shared/config/app_theme.dart';
+import 'package:scp_mobile_shared/models/supplier_model.dart';
 
-/// Home screen - displays products from linked suppliers
+/// Home screen - displays suppliers with Send Request button
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<ProductCubit>().loadProducts();
+    context.read<SupplierCubit>().discoverSuppliers();
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -39,9 +39,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onSearch(String query) {
     if (query.isEmpty) {
-      context.read<ProductCubit>().loadProducts();
+      context.read<SupplierCubit>().discoverSuppliers();
     } else {
-      context.read<ProductCubit>().searchProducts(query);
+      context.read<SupplierCubit>().discoverSuppliers(searchQuery: query);
+    }
+  }
+
+  void _handleSendRequest(String supplierId) async {
+    try {
+      await context.read<SupplierCubit>().sendLinkRequest(supplierId);
+      // Refresh supplier list to show updated link status
+      await context.read<SupplierCubit>().discoverSuppliers(
+        searchQuery: _searchController.text.isEmpty ? null : _searchController.text,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Link request sent successfully'),
+            backgroundColor: AppTheme.successColor,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send request: ${e.toString()}'),
+            backgroundColor: AppTheme.errorColor,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -49,24 +78,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Products'),
+        title: const Text('Suppliers'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.shopping_cart),
-            onPressed: () {
-              // Navigate to cart
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const CartScreen(),
-                ),
-              );
-            },
-          ),
-          // Debug button - refresh products
+          // Debug button - refresh suppliers
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              context.read<ProductCubit>().loadProducts();
+              context.read<SupplierCubit>().discoverSuppliers();
             },
           ),
         ],
@@ -79,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search products...',
+                hintText: 'Search suppliers...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -94,88 +112,152 @@ class _HomeScreenState extends State<HomeScreen> {
               onChanged: _onSearch,
             ),
           ),
-          // Products list
+          // Suppliers list
           Expanded(
-            child: BlocListener<ProductCubit, ProductState>(
-              listener: (context, state) {
-                // Log state changes for debugging
-                print('═══════════════════════════════════════');
-                print('🏠 [HOME] State changed');
-                print('🏠 [HOME] Products count: ${state.products.length}');
-                print('🏠 [HOME] Is loading: ${state.isLoading}');
-                print('🏠 [HOME] Error: ${state.error ?? "none"}');
-                if (state.products.isNotEmpty) {
-                  print('✅ [HOME] Products available: ${state.products.length}');
-                  print('✅ [HOME] First product: ${state.products.first.name}');
-                } else if (!state.isLoading && state.error == null) {
-                  print('⚠️  [HOME] No products and no error - may not have approved links');
-                  print('⚠️  [HOME] Check: 1) User has approved supplier links');
-                  print('⚠️  [HOME] Check: 2) Linked suppliers have products');
-                  print('⚠️  [HOME] Check: 3) Consumer ID in token matches database');
-                } else if (state.error != null) {
-                  print('❌ [HOME] Error occurred: ${state.error}');
+            child: BlocBuilder<SupplierCubit, SupplierState>(
+              builder: (context, state) {
+                // Show error if there is one (regardless of loading state)
+                if (state.error != null && state.suppliers.isEmpty && !state.isLoading) {
+                  return ErrorDisplay(
+                    message: state.error!,
+                    onRetry: () => context.read<SupplierCubit>().discoverSuppliers(),
+                  );
                 }
-                print('═══════════════════════════════════════');
-              },
-              child: BlocBuilder<ProductCubit, ProductState>(
-                builder: (context, state) {
-                  // Show error if there is one (regardless of loading state)
-                  if (state.error != null && state.products.isEmpty && !state.isLoading) {
-                    return ErrorDisplay(
-                      message: state.error!,
-                      onRetry: () => context.read<ProductCubit>().loadProducts(),
-                    );
-                  }
 
-                  if (state.isLoading && state.products.isEmpty) {
-                    return const LoadingIndicator();
-                  }
+                if (state.isLoading && state.suppliers.isEmpty) {
+                  return const LoadingIndicator();
+                }
 
-                  if (state.products.isEmpty) {
-                    print('⚠️  [HOME_UI] Showing empty state - products list is empty');
-                    print('⚠️  [HOME_UI] IsLoading: ${state.isLoading}');
-                    print('⚠️  [HOME_UI] Error: ${state.error ?? "none"}');
-                    return EmptyStateWidget(
-                      icon: Icons.inventory_2_outlined,
-                      title: 'No products found',
-                      subtitle: state.error != null 
-                          ? 'Error: ${state.error}'
-                          : 'Start by linking with a supplier. Once approved, products will appear here.',
-                    );
-                  }
+                if (state.suppliers.isEmpty) {
+                  return EmptyStateWidget(
+                    icon: Icons.business_outlined,
+                    title: 'No suppliers found',
+                    subtitle: state.error != null 
+                        ? 'Error: ${state.error}'
+                        : 'No suppliers available at the moment.',
+                  );
+                }
 
-                  print('✅ [HOME_UI] Rendering ${state.products.length} products in GridView');
-                  return GridView.builder(
+                return ListView.builder(
                   padding: const EdgeInsets.all(8),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.7,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                  ),
-                  itemCount: state.products.length,
+                  itemCount: state.suppliers.length,
                   itemBuilder: (context, index) {
-                    final product = state.products[index];
-                    return ProductCard(
-                      product: product,
-                      onTap: () {
-                        // Show product details
-                        context.read<ProductCubit>().loadProductDetails(product.id);
-                      },
-                      onAddToCart: () {
-                        context.read<CartCubit>().addToCart(product);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${product.name} added to cart'),
-                            duration: const Duration(seconds: 2),
+                    final supplier = state.suppliers[index];
+                    final isLinked = supplier.isLinked || 
+                        supplier.linkStatus == LinkRequestStatus.accepted;
+                    final isPending = supplier.linkStatus == LinkRequestStatus.pending;
+                    
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: supplier.logoUrl != null
+                            ? CircleAvatar(
+                                backgroundImage: NetworkImage(supplier.logoUrl!),
+                                radius: 30,
+                              )
+                            : const CircleAvatar(
+                                radius: 30,
+                                child: Icon(Icons.business, size: 30),
+                              ),
+                        title: Text(
+                          supplier.companyName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
-                        );
-                      },
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (supplier.description != null && supplier.description!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Text(
+                                  supplier.description!,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            if (supplier.address != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.location_on, size: 16),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        supplier.address!,
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            if (isLinked)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Chip(
+                                  label: const Text('Linked'),
+                                  backgroundColor: AppTheme.successColor.withOpacity(0.2),
+                                  labelStyle: TextStyle(color: AppTheme.successColor),
+                                ),
+                              )
+                            else if (isPending)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Chip(
+                                  label: const Text('Pending'),
+                                  backgroundColor: AppTheme.pendingColor.withOpacity(0.2),
+                                  labelStyle: TextStyle(color: AppTheme.pendingColor),
+                                ),
+                              ),
+                          ],
+                        ),
+                        trailing: isLinked
+                            ? ElevatedButton(
+                                onPressed: state.isLoading
+                                    ? null
+                                    : () {
+                                        // Navigate to supplier products page
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => SupplierProductsScreen(
+                                              supplier: supplier,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                child: const Text('View Products'),
+                              )
+                            : isPending
+                                ? null
+                                : ElevatedButton(
+                                    onPressed: state.isLoading
+                                        ? null
+                                        : () => _handleSendRequest(supplier.id),
+                                    child: const Text('Send Request'),
+                                  ),
+                        onTap: isLinked
+                            ? () {
+                                // Navigate to supplier products page when tapping on linked supplier
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => SupplierProductsScreen(
+                                      supplier: supplier,
+                                    ),
+                                  ),
+                                );
+                              }
+                            : null,
+                      ),
                     );
                   },
                 );
-                },
-              ),
+              },
             ),
           ),
         ],

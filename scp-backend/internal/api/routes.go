@@ -38,6 +38,7 @@ func SetupRoutes(
 		auth := v1.Group("/auth")
 		{
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/signup", authHandler.Signup)
 			auth.POST("/refresh", authHandler.RefreshToken)
 			
 			// Protected auth routes
@@ -58,6 +59,7 @@ func SetupRoutes(
 			consumer.GET("/suppliers/:id", consumerHandler.GetSupplier)
 			consumer.POST("/suppliers/:id/link-request", consumerHandler.RequestLink)
 			consumer.GET("/supplier-links", consumerHandler.GetSupplierLinks)
+			consumer.GET("/link-requests", consumerHandler.GetLinkRequests)
 			consumer.GET("/linked-suppliers", consumerHandler.GetLinkedSuppliers)
 			consumer.GET("/products", productHandler.GetConsumerProducts)
 			consumer.GET("/products/:id", productHandler.GetProduct)
@@ -67,6 +69,7 @@ func SetupRoutes(
 			consumer.GET("/orders/:id", orderHandler.GetOrder)
 			consumer.POST("/orders/:id/cancel", orderHandler.CancelOrder)
 			consumer.GET("/conversations", chatHandler.GetConversations)
+			consumer.POST("/conversations", chatHandler.CreateConversation)
 			consumer.GET("/conversations/:id/messages", chatHandler.GetMessages)
 			consumer.POST("/conversations/:id/messages", chatHandler.SendMessage)
 			consumer.POST("/conversations/:id/messages/read", chatHandler.MarkMessagesAsRead)

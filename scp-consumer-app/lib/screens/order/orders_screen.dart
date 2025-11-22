@@ -30,7 +30,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       case OrderStatus.pending:
         return 'pending';
       case OrderStatus.confirmed:
-        return 'confirmed';
+        return 'accepted'; // Backend uses "accepted", display as "accepted"
       case OrderStatus.processing:
         return 'processing';
       case OrderStatus.shipped:
@@ -48,6 +48,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
         return AppTheme.successColor;
       case 'cancelled':
         return AppTheme.errorColor;
+      case 'accepted':
+      case 'confirmed':
+        return AppTheme.successColor; // Accepted orders should show as success
       case 'processing':
       case 'shipped':
         return AppTheme.primaryColor;

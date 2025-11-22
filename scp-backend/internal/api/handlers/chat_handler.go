@@ -93,6 +93,11 @@ func (h *ChatHandler) GetConversations(c *gin.Context) {
 	userID := c.GetString("user_id")
 	role := c.GetString("role")
 
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, ErrorResponse("Invalid user ID"))
+		return
+	}
+
 	var conversations []models.Conversation
 	var err error
 
@@ -100,6 +105,10 @@ func (h *ChatHandler) GetConversations(c *gin.Context) {
 		conversations, err = h.conversationRepo.GetByConsumerID(userID)
 	} else if role == "sales_rep" {
 		supplierID := c.GetString("supplier_id")
+		if supplierID == "" {
+			c.JSON(http.StatusBadRequest, ErrorResponse("Supplier ID required"))
+			return
+		}
 		conversations, err = h.conversationRepo.GetBySupplierID(supplierID)
 	} else {
 		c.JSON(http.StatusForbidden, ErrorResponse("Unauthorized role"))
@@ -111,10 +120,21 @@ func (h *ChatHandler) GetConversations(c *gin.Context) {
 		return
 	}
 
-	// Return paginated format expected by Flutter frontend
-	c.JSON(http.StatusOK, PaginatedResponse(conversations, 1, len(conversations), len(conversations)))
-}
+	// Ensure we always return a valid array
+	if conversations == nil {
+		conversations = []models.Conversation{}
+	}
 
+	// Use proper pagination - if no conversations, use pageSize of 1 to avoid division by zero
+	total := len(conversations)
+	pageSize := total
+	if pageSize == 0 {
+		pageSize = 1
+	}
+
+	// Return paginated format expected by Flutter frontend
+	c.JSON(http.StatusOK, PaginatedResponse(conversations, 1, pageSize, total))
+}
 func (h *ChatHandler) GetMessages(c *gin.Context) {
 	conversationID := c.Param("id")
 	page, pageSize := ParsePagination(c)
@@ -334,3 +354,39 @@ func (h *ChatHandler) MarkMessagesAsRead(c *gin.Context) {
 	c.JSON(http.StatusOK, SuccessResponse(gin.H{"message": "Messages marked as read"}))
 }
 
+
+// CreateConversation creates a new conversation or returns existing one
+func (h *ChatHandler) CreateConversation(c *gin.Context) {
+	consumerID := c.GetString("user_id")
+	role := c.GetString("role")
+
+	if consumerID == "" {
+		c.JSON(http.StatusUnauthorized, ErrorResponse("Invalid user ID"))
+		return
+	}
+
+	if role != "consumer" {
+		c.JSON(http.StatusForbidden, ErrorResponse("Only consumers can create conversations"))
+		return
+	}
+
+	var req struct {
+		SupplierID string `json:"supplier_id" binding:"required"`
+		OrderID    string `json:"order_id,omitempty"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse(err.Error()))
+		return
+	}
+
+	// Get or create conversation
+	conversation, err := h.conversationRepo.GetOrCreate(consumerID, req.SupplierID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse("Failed to create conversation"))
+		return
+	}
+
+	// Return the conversation
+	c.JSON(http.StatusOK, SuccessResponse(conversation))
+}

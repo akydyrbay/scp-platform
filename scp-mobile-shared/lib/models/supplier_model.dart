@@ -37,9 +37,25 @@ class SupplierModel extends Equatable {
   });
 
   factory SupplierModel.fromJson(Map<String, dynamic> json) {
+    // Handle both 'name' (backend) and 'company_name' (legacy) fields
+    final companyName = json['company_name'] as String? ?? json['name'] as String? ?? '';
+    
+    // Parse created_at - handle both string and timestamp formats
+    DateTime createdAt;
+    try {
+      if (json['created_at'] is String) {
+        createdAt = DateTime.parse(json['created_at'] as String);
+      } else {
+        // If it's already a DateTime or other format, try to convert
+        createdAt = DateTime.now();
+      }
+    } catch (e) {
+      createdAt = DateTime.now();
+    }
+    
     return SupplierModel(
-      id: json['id'] as String,
-      companyName: json['company_name'] as String,
+      id: json['id'] as String? ?? '',
+      companyName: companyName,
       description: json['description'] as String?,
       logoUrl: json['logo_url'] as String?,
       address: json['address'] as String?,
@@ -50,14 +66,14 @@ class SupplierModel extends Equatable {
       rating: (json['rating'] as num?)?.toDouble(),
       reviewCount: json['review_count'] as int?,
       categories: (json['categories'] as List<dynamic>?)
-              ?.map((e) => e as String)
+              ?.map((e) => e.toString())
               .toList() ??
           [],
       isLinked: json['is_linked'] as bool? ?? false,
       linkStatus: json['link_status'] != null
-          ? _parseLinkStatus(json['link_status'] as String)
+          ? _parseLinkStatus(json['link_status'].toString())
           : null,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: createdAt,
     );
   }
 

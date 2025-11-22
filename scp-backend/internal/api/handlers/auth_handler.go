@@ -99,6 +99,56 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, SuccessResponse(gin.H{"message": "Logged out successfully"}))
 }
 
+func (h *AuthHandler) Signup(c *gin.Context) {
+	var req struct {
+		Email       string  `json:"email" binding:"required,email"`
+		Password    string  `json:"password" binding:"required,min=8"`
+		FirstName   *string `json:"first_name"`
+		LastName    *string `json:"last_name"`
+		CompanyName *string `json:"company_name"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse(err.Error()))
+		return
+	}
+
+	// Check if user exists
+	_, err := h.userRepo.GetByEmail(req.Email)
+	if err == nil {
+		c.JSON(http.StatusConflict, ErrorResponse("User already exists"))
+		return
+	}
+
+	passwordHash, err := password.Hash(req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse("Failed to hash password"))
+		return
+	}
+
+	user := &models.User{
+		Email:        req.Email,
+		PasswordHash: passwordHash,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		CompanyName:  req.CompanyName,
+		Role:         "consumer", // Only allow consumer signup
+		SupplierID:   nil,
+	}
+
+	if err := h.userRepo.Create(user); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse("Failed to create user"))
+		return
+	}
+
+	user.PasswordHash = ""
+	// Return success message - user needs to login separately
+	c.JSON(http.StatusCreated, SuccessResponse(gin.H{
+		"message": "Account created successfully. You can now login with your credentials.",
+		"user":    user,
+	}))
+}
+
 func (h *AuthHandler) CreateUser(c *gin.Context) {
 	var req struct {
 		Email       string  `json:"email" binding:"required,email"`
@@ -205,6 +255,14 @@ func ErrorResponse(message string) gin.H {
 }
 
 func PaginatedResponse(results interface{}, page, pageSize, total int) gin.H {
+	// Prevent division by zero
+	if pageSize <= 0 {
+		pageSize = 1
+	}
+	if page <= 0 {
+		page = 1
+	}
+	
 	totalPages := (total + pageSize - 1) / pageSize
 	if totalPages == 0 {
 		totalPages = 1

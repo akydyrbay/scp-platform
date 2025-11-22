@@ -101,6 +101,7 @@ class OrderModel extends Equatable {
     switch (status.toLowerCase()) {
       case 'pending':
         return OrderStatus.pending;
+      case 'accepted':
       case 'confirmed':
         return OrderStatus.confirmed;
       case 'processing':
@@ -110,6 +111,7 @@ class OrderModel extends Equatable {
       case 'delivered':
         return OrderStatus.delivered;
       case 'cancelled':
+      case 'rejected':
         return OrderStatus.cancelled;
       default:
         return OrderStatus.pending;
