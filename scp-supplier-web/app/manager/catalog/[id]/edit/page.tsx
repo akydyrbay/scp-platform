@@ -39,7 +39,7 @@ export default function ManagerCatalogEditPage() {
   const productId = params.id
 
   const [categories] = useState(initialCategories)
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [newCategory, setNewCategory] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -115,7 +115,7 @@ export default function ManagerCatalogEditPage() {
           parsedCategory = bracketMatch[1].trim()
           descriptionText = bracketMatch[2].trim()
           if (parsedCategory) {
-            setSelectedCategories([parsedCategory])
+            setSelectedCategory(parsedCategory)
           }
         } else {
           // Try Category: format
@@ -124,9 +124,14 @@ export default function ManagerCatalogEditPage() {
             parsedCategory = colonMatch[1].trim()
             descriptionText = colonMatch[2].trim()
             if (parsedCategory) {
-              setSelectedCategories([parsedCategory])
+              setSelectedCategory(parsedCategory)
             }
           }
+        }
+        
+        // Also check if product has a category field directly
+        if (!parsedCategory && product.category) {
+          setSelectedCategory(product.category)
         }
         
         // Set form values
@@ -155,13 +160,21 @@ export default function ManagerCatalogEditPage() {
           errorMessage = error.message
           
           // Check if it's a 404 error (product not found)
-          if (error.message.includes('not found') || error.message.includes('does not exist')) {
-            errorMessage = 'This product no longer exists. It may have been deleted.'
-            // Show error message for a bit longer for 404 errors
-            toast.error(errorMessage, { duration: 4000 })
-            setTimeout(() => {
-              router.push('/manager/catalog')
-            }, 3000)
+          if (error.message.includes('not found') || error.message.includes('does not exist') || error.message.includes('deleted')) {
+            errorMessage = 'This product no longer exists. It may have been deleted or the link is invalid.'
+            // Show error message and redirect immediately
+            toast.error(errorMessage, { duration: 3000 })
+            router.push('/manager/catalog')
+            setIsLoading(false)
+            return
+          }
+          
+          // Check for permission errors
+          if (error.message.includes('permission') || error.message.includes('different supplier')) {
+            errorMessage = 'You do not have permission to edit this product. It may belong to a different supplier.'
+            toast.error(errorMessage, { duration: 3000 })
+            router.push('/manager/catalog')
+            setIsLoading(false)
             return
           }
           
@@ -189,17 +202,15 @@ export default function ManagerCatalogEditPage() {
   }, [productId, reset, router])
 
   function handleCategoryToggle(category: string) {
-    setSelectedCategories(current =>
-      current.includes(category)
-        ? current.filter(item => item !== category)
-        : [...current, category]
-    )
+    // Only allow one category - if clicking the same category, deselect it
+    setSelectedCategory(current => current === category ? null : category)
   }
 
   const handleAddCategory = () => {
     const trimmed = newCategory.trim()
     if (!trimmed || categories.includes(trimmed)) return
-    setSelectedCategories((prev: string[]) => [...prev, trimmed])
+    // Set the new category as the selected one (replaces any existing selection)
+    setSelectedCategory(trimmed)
     setNewCategory('')
   }
 
@@ -269,12 +280,11 @@ export default function ManagerCatalogEditPage() {
       // Prepare description with category prefix if category is selected
       // Format: [Category Name] Description
       let finalDescription = data.description || ''
-      if (selectedCategories.length > 0 && selectedCategories[0]) {
-        const categoryName = selectedCategories[0]
+      if (selectedCategory) {
         // Remove existing category prefix if exists
         finalDescription = finalDescription.replace(/^\[([^\]]+)\]\s*/, '').replace(/^([^:]+):\s*/, '')
         // Add category prefix
-        finalDescription = `[${categoryName}] ${finalDescription}`.trim()
+        finalDescription = `[${selectedCategory}] ${finalDescription}`.trim()
       }
 
       // Prepare product update data
@@ -285,6 +295,7 @@ export default function ManagerCatalogEditPage() {
         price: data.price,
         stock_level: data.stock_level,
         min_order_quantity: data.min_order_quantity,
+        category: selectedCategory || undefined,
       }
 
       // Only include discount if it's different from current or if it's provided
@@ -473,10 +484,10 @@ export default function ManagerCatalogEditPage() {
         <SectionCard title='Categorisation & Status'>
           <div className='grid gap-6 md:grid-cols-2'>
             <div className='space-y-3'>
-              <Label>Categories (Optional)</Label>
+              <Label>Category (Optional)</Label>
               <div className='flex flex-wrap gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4'>
                 {categories.map(category => {
-                  const selected = selectedCategories.includes(category)
+                  const selected = selectedCategory === category
                   return (
                     <button
                       key={category}
@@ -505,7 +516,10 @@ export default function ManagerCatalogEditPage() {
                   Add
                 </Button>
               </div>
-              <p className='text-xs text-neutral-500'>Categories are for organization only. Product status is determined by stock level: stock = 0 = Draft, stock &gt; 0 = On Sale.</p>
+              {selectedCategory && (
+                <p className='text-xs text-emerald-600'>Selected: {selectedCategory}</p>
+              )}
+              <p className='text-xs text-neutral-500'>Select one category for organization. Product status is determined by stock level: stock = 0 = Draft, stock &gt; 0 = On Sale.</p>
             </div>
             <div className='space-y-3'>
               <Label>Current Status</Label>

@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS products (
     image_url TEXT,
     unit VARCHAR(50) NOT NULL,
     price DECIMAL(10, 2) NOT NULL CHECK (price >= 0),
-    discount DECIMAL(5, 2) CHECK (discount >= 0 AND discount <= 100),
+    discount DECIMAL(5, 2) DEFAULT 0 CHECK (discount >= 0 AND discount <= 100),
     stock_level INTEGER NOT NULL DEFAULT 0 CHECK (stock_level >= 0),
     min_order_quantity INTEGER NOT NULL DEFAULT 1 CHECK (min_order_quantity > 0),
     supplier_id UUID NOT NULL REFERENCES suppliers(id) ON DELETE CASCADE,

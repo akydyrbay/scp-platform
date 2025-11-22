@@ -36,7 +36,7 @@ type CreateProductFormValues = z.infer<typeof createProductSchema>
 export default function ManagerCatalogCreatePage() {
   const router = useRouter()
   const [categories] = useState(initialCategories)
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [newCategory, setNewCategory] = useState('')
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -58,18 +58,15 @@ export default function ManagerCatalogCreatePage() {
   })
 
   function handleCategoryToggle(category: string) {
-    setSelectedCategories(current =>
-      current.includes(category)
-        ? current.filter(item => item !== category)
-        : [...current, category]
-    )
+    // Only allow one category - if clicking the same category, deselect it
+    setSelectedCategory(current => current === category ? null : category)
   }
 
   const handleAddCategory = () => {
     const trimmed = newCategory.trim()
     if (!trimmed || categories.includes(trimmed)) return
-    // Categories are for display only, not stored in backend
-    setSelectedCategories((prev: string[]) => [...prev, trimmed])
+    // Set the new category as the selected one (replaces any existing selection)
+    setSelectedCategory(trimmed)
     setNewCategory('')
   }
 
@@ -138,7 +135,7 @@ export default function ManagerCatalogCreatePage() {
         discount: data.discount || undefined,
         stock_level: data.stock_level,
         min_order_quantity: data.min_order_quantity,
-        category: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
+        category: selectedCategory || undefined,
       }
 
       await createProduct(productData)
@@ -257,10 +254,10 @@ export default function ManagerCatalogCreatePage() {
         <SectionCard title='Categorisation & Status'>
           <div className='grid gap-6 md:grid-cols-2'>
             <div className='space-y-3'>
-              <Label>Categories (Optional)</Label>
+              <Label>Category (Optional)</Label>
               <div className='flex flex-wrap gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4'>
                 {categories.map(category => {
-                  const selected = selectedCategories.includes(category)
+                  const selected = selectedCategory === category
                   return (
                     <button
                       key={category}
@@ -289,7 +286,10 @@ export default function ManagerCatalogCreatePage() {
                   Add
                 </Button>
               </div>
-              <p className='text-xs text-neutral-500'>Categories are for organization only. Product status is determined by stock level: stock = 0 = Draft, stock &gt; 0 = On Sale.</p>
+              {selectedCategory && (
+                <p className='text-xs text-emerald-600'>Selected: {selectedCategory}</p>
+              )}
+              <p className='text-xs text-neutral-500'>Select one category for organization. Product status is determined by stock level: stock = 0 = Draft, stock &gt; 0 = On Sale.</p>
             </div>
             <div className='space-y-3'>
               <Label>Product Status</Label>

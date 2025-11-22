@@ -85,6 +85,7 @@ func SetupRoutes(
 
 			// Products
 			supplier.GET("/products", productHandler.GetProducts)
+			supplier.GET("/products/:id", productHandler.GetProduct)
 			supplier.POST("/products", productHandler.CreateProduct)
 			supplier.PUT("/products/:id", productHandler.UpdateProduct)
 			supplier.DELETE("/products/:id", productHandler.DeleteProduct)

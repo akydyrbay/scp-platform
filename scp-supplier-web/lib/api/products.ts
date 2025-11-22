@@ -167,42 +167,63 @@ export async function getProduct(id: string): Promise<Product> {
   
   // Log the API call for debugging
   const apiUrl = `/supplier/products/${id}`
-  console.log('API call to:', apiUrl)
-  console.log('Product ID being requested:', id)
+  console.log('[getProduct] API call to:', apiUrl)
+  console.log('[getProduct] Product ID being requested:', id)
   
   try {
     if (!id || id.trim() === '') {
       throw new Error('Product ID is required')
     }
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(id)) {
+      throw new Error(`Invalid product ID format: ${id}`)
+    }
+
     const response = await client.get<Product | { success: boolean; data: Product }>(apiUrl)
     
-    console.log('GetProduct API response:', {
+    console.log('[getProduct] API response:', {
       status: response.status,
       hasData: !!response.data,
       dataType: typeof response.data,
-      dataKeys: response.data ? Object.keys(response.data) : []
+      dataKeys: response.data ? Object.keys(response.data) : [],
+      dataPreview: response.data ? JSON.stringify(response.data).substring(0, 200) : 'no data'
     })
     
     // Handle different response formats
     if (response.data && typeof response.data === 'object') {
-      // Direct product format
-      if ('id' in response.data && 'name' in response.data) {
-        console.log('Product fetched successfully (direct format):', (response.data as Product).id)
-        return response.data as Product
+      // Direct product format - check for required fields
+      if ('id' in response.data && 'name' in response.data && 'price' in response.data) {
+        const product = response.data as Product
+        console.log('[getProduct] Product fetched successfully (direct format):', product.id)
+        return product
       }
       
       // Wrapped format (success/data)
       if ('success' in response.data && 'data' in response.data) {
         const wrappedData = (response.data as any).data
-        if (wrappedData && 'id' in wrappedData && 'name' in wrappedData) {
-          console.log('Product fetched successfully (wrapped format):', wrappedData.id)
+        if (wrappedData && 'id' in wrappedData && 'name' in wrappedData && 'price' in wrappedData) {
+          console.log('[getProduct] Product fetched successfully (wrapped format):', wrappedData.id)
           return wrappedData as Product
+        }
+      }
+      
+      // Try to extract product from error response format
+      if ('error' in response.data) {
+        const errorData = (response.data as any).error
+        if (errorData && typeof errorData === 'object' && 'message' in errorData) {
+          throw new Error(errorData.message || 'Failed to fetch product')
         }
       }
     }
     
-    console.error('Unexpected response format:', response.data)
+    console.error('[getProduct] Unexpected response format:', {
+      data: response.data,
+      dataType: typeof response.data,
+      isArray: Array.isArray(response.data),
+      keys: response.data ? Object.keys(response.data) : []
+    })
     throw new Error('Invalid product response format from server')
   } catch (error: any) {
     // Handle JSON parse errors specifically
@@ -281,6 +302,19 @@ export async function getProduct(id: string): Promise<Product> {
       })
       
       if (status === 404) {
+        // Fallback: Try to get product from list if single product endpoint doesn't exist
+        console.log('[getProduct] 404 error, trying fallback: fetch from products list')
+        try {
+          const allProducts = await getProducts(1, 1000) // Get large page to find the product
+          const product = allProducts.results.find(p => p.id === id)
+          if (product) {
+            console.log('[getProduct] Product found via fallback method:', product.id)
+            return product
+          }
+        } catch (fallbackError) {
+          console.error('[getProduct] Fallback method also failed:', fallbackError)
+          // Continue to throw original 404 error
+        }
         throw new Error(`Product not found (ID: ${id}). It may have been deleted or does not exist.`)
       }
       if (status === 403) {
@@ -296,7 +330,7 @@ export async function getProduct(id: string): Promise<Product> {
       throw new Error(errorMessage || `Failed to fetch product (${status})`)
     }
     
-    // Handle other errors
+    // Handle other errors (non-HTTP errors)
     throw new Error(error.message || 'Failed to fetch product. Please try again.')
   }
 }
