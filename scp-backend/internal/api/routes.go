@@ -16,6 +16,7 @@ func SetupRoutes(
 	chatHandler *handlers.ChatHandler,
 	notificationHandler *handlers.NotificationHandler,
 	supplierHandler *handlers.SupplierHandler,
+	uploadHandler *handlers.UploadHandler,
 	jwtService *jwt.JWTService,
 	corsOrigins []string,
 ) *gin.Engine {
@@ -48,6 +49,13 @@ func SetupRoutes(
 				authProtected.GET("/me", authHandler.GetCurrentUser)
 				authProtected.POST("/logout", authHandler.Logout)
 			}
+		}
+
+		// Upload routes (protected)
+		upload := v1.Group("/upload")
+		upload.Use(middleware.AuthMiddleware(jwtService))
+		{
+			upload.POST("", uploadHandler.UploadFile)
 		}
 
 		// Consumer routes

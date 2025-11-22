@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../config/app_config.dart';
 
 /// Chat message model
 class MessageModel extends Equatable {
@@ -60,7 +61,19 @@ class MessageModel extends Equatable {
     }
 
     // Handle file URL - can be 'file_url' or 'attachment_url'
-    final fileUrl = json['file_url'] as String? ?? json['attachment_url'] as String?;
+    String? fileUrl = json['file_url'] as String? ?? json['attachment_url'] as String?;
+    
+    // Convert relative URL to absolute URL if needed
+    if (fileUrl != null && !fileUrl!.startsWith('http://') && !fileUrl!.startsWith('https://')) {
+      // Remove /api/v1 from base URL and prepend to relative URL
+      String baseUrl = AppConfig.baseUrl;
+      String serverBaseUrl = baseUrl.replaceAll('/api/v1', '');
+      if (fileUrl!.startsWith('/')) {
+        fileUrl = '$serverBaseUrl$fileUrl';
+      } else {
+        fileUrl = '$serverBaseUrl/$fileUrl';
+      }
+    }
 
     // Handle message type
     final typeStr = json['type'] as String? ?? json['sender_role'] as String? ?? 'text';

@@ -60,6 +60,12 @@ func main() {
 	authService := services.NewAuthService(userRepo, jwtService)
 	orderService := services.NewOrderService(orderRepo, productRepo, linkRepo)
 
+	// Create uploads directory for static file serving
+	uploadDir := "./uploads"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		log.Printf("Warning: Failed to create uploads directory: %v", err)
+	}
+
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService, userRepo)
 	productHandler := handlers.NewProductHandler(productRepo)
@@ -69,12 +75,7 @@ func main() {
 	chatHandler := handlers.NewChatHandler(conversationRepo, messageRepo)
 	notificationHandler := handlers.NewNotificationHandler(notificationRepo)
 	supplierHandler := handlers.NewSupplierHandler(supplierRepo)
-	
-	// Create uploads directory for static file serving
-	uploadDir := "./uploads"
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		log.Printf("Warning: Failed to create uploads directory: %v", err)
-	}
+	uploadHandler := handlers.NewUploadHandler(uploadDir)
 
 	// Setup routes
 	router := api.SetupRoutes(
@@ -86,6 +87,7 @@ func main() {
 		chatHandler,
 		notificationHandler,
 		supplierHandler,
+		uploadHandler,
 		jwtService,
 		cfg.Server.CORSOrigins,
 	)
