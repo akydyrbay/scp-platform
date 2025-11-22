@@ -51,9 +51,12 @@ export interface Message {
   conversation_id: string
   sender_id: string
   sender_role: string
+  sender_name?: string
   content: string
-  created_at: string
-  // Some backends may return "timestamp" instead of "created_at" – keep optional for compatibility.
+  created_at?: string
+  is_read?: boolean
+  attachment_url?: string | null
+  // Backend returns "timestamp" in ISO format, but we also support "created_at" for compatibility
   timestamp?: string
 }
 
@@ -297,6 +300,55 @@ export async function escalateComplaint(id: string): Promise<Complaint> {
   } catch (error: any) {
     console.error('Failed to escalate complaint:', error)
     throw new Error(error.message || 'Failed to escalate complaint')
+  }
+}
+
+/**
+ * Send a message in a conversation
+ */
+export async function sendMessage(conversationId: string, content: string, orderId?: string): Promise<Message> {
+  const client = getClientApiClient()
+  
+  try {
+    const payload: any = {
+      content,
+      type: 'text'
+    }
+    
+    if (orderId) {
+      payload.order_id = orderId
+    }
+    
+    const response = await client.post<Message | { success: boolean; data: Message }>(
+      `/supplier/conversations/${conversationId}/messages`,
+      payload
+    )
+    
+    // Handle wrapped response format
+    if (response.data && 'success' in response.data && response.data.success && response.data.data) {
+      return response.data.data
+    }
+    
+    // Handle direct response format
+    return response.data as Message
+  } catch (error: any) {
+    console.error('Failed to send message:', error)
+    const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message
+    throw new Error(errorMessage || 'Failed to send message')
+  }
+}
+
+/**
+ * Mark messages as read in a conversation
+ */
+export async function markMessagesAsRead(conversationId: string): Promise<void> {
+  const client = getClientApiClient()
+  
+  try {
+    await client.post(`/supplier/conversations/${conversationId}/messages/read`, {})
+  } catch (error: any) {
+    console.error('Failed to mark messages as read:', error)
+    // Don't throw - this is a non-critical operation
   }
 }
 

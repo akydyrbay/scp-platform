@@ -36,11 +36,12 @@ func (r *MessageRepository) GetByConversationID(conversationID string, page, pag
 			u.first_name as "sender.first_name",
 			u.last_name as "sender.last_name",
 			u.company_name as "sender.company_name",
-			u.profile_image_url as "sender.profile_image_url"
+			u.profile_image_url as "sender.profile_image_url",
+			u.role as "sender.role"
 		FROM messages m
 		LEFT JOIN users u ON m.sender_id = u.id
 		WHERE m.conversation_id = $1
-		ORDER BY m.created_at DESC
+		ORDER BY m.created_at ASC
 		LIMIT $2 OFFSET $3
 	`, conversationID, pageSize, offset)
 	

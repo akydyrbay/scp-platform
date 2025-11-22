@@ -30,6 +30,13 @@ func MessageResponse(msg *models.Message) gin.H {
 		senderName = "User " + msg.SenderID[:8]
 	}
 
+	// Use the sender's actual role from the users table if available
+	// This ensures we return the original role (owner/manager/sales_rep) instead of the stored 'sales_rep'
+	senderRole := msg.SenderRole
+	if msg.Sender != nil && msg.Sender.Role != "" {
+		senderRole = msg.Sender.Role
+	}
+
 	// Determine message type from attachment_url
 	messageType := "text"
 	if msg.AttachmentURL != nil && *msg.AttachmentURL != "" {
@@ -50,6 +57,7 @@ func MessageResponse(msg *models.Message) gin.H {
 		"id":              msg.ID,
 		"conversation_id": msg.ConversationID,
 		"sender_id":       msg.SenderID,
+		"sender_role":     senderRole,
 		"sender_name":     senderName,
 		"content":         msg.Content,
 		"type":            messageType,
@@ -268,10 +276,18 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 		return
 	}
 
+	// Map supplier-side roles (manager, owner) to 'sales_rep' for database constraint
+	// The messages table only allows 'consumer' or 'sales_rep'
+	// NOTE: We store 'sales_rep' in DB but return the original role in API response
+	messageSenderRole := senderRole
+	if senderRole == "manager" || senderRole == "owner" {
+		messageSenderRole = "sales_rep"
+	}
+
 	message := &models.Message{
 		ConversationID: conversation.ID,
 		SenderID:       senderID,
-		SenderRole:     senderRole,
+		SenderRole:     messageSenderRole,
 		Content:        content,
 		AttachmentURL:  attachmentURL,
 		IsRead:         false,
@@ -292,6 +308,9 @@ func (h *ChatHandler) SendMessage(c *gin.Context) {
 		// Find the message we just created (should be the first one since DESC order)
 		for _, m := range messages {
 			if m.ID == message.ID {
+				// Override SenderRole with original role for response (not the stored 'sales_rep')
+				// This ensures the response shows the actual role (owner/manager/sales_rep)
+				m.SenderRole = senderRole
 				c.JSON(http.StatusCreated, SuccessResponse(MessageResponse(&m)))
 				return
 			}

@@ -68,9 +68,6 @@ function generateHistory(complaint: Complaint, messages: Message[]): string[] {
     return (msg.created_at || (msg as any).timestamp || '') as string
   }
   
-  // Add complaint creation
-  history.push(`${formatDate(complaint.created_at)} · Complaint created`)
-  
   // Add escalation if exists
   if (complaint.escalated_at) {
     history.push(`${formatDate(complaint.escalated_at)} · Issue escalated by sales representative`)
@@ -91,6 +88,9 @@ function generateHistory(complaint: Complaint, messages: Message[]): string[] {
     const role = msg.sender_role === 'consumer' ? 'Customer' : 'Sales Representative'
     history.push(`${formatDate(dateStr)} · ${role}: ${msg.content.substring(0, 50)}${msg.content.length > 50 ? '...' : ''}`)
   }
+  
+    // Add complaint creation
+  history.push(`${formatDate(complaint.created_at)} · Complaint created`)
   
   return history.reverse()
 }
