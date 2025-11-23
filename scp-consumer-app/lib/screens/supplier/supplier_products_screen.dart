@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../cubits/product_cubit.dart';
@@ -24,6 +25,7 @@ class SupplierProductsScreen extends StatefulWidget {
 
 class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
   final _searchController = TextEditingController();
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -35,6 +37,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
@@ -45,14 +48,20 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
   }
 
   void _onSearch(String query) {
-    if (query.isEmpty) {
-      context.read<ProductCubit>().loadProducts(supplierId: widget.supplier.id);
-    } else {
-      context.read<ProductCubit>().loadProducts(
-            supplierId: widget.supplier.id,
-            searchQuery: query,
-          );
-    }
+    // Cancel previous timer
+    _debounceTimer?.cancel();
+    
+    // Debounce search: wait 500ms after user stops typing
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (query.isEmpty) {
+        context.read<ProductCubit>().loadProducts(supplierId: widget.supplier.id);
+      } else {
+        context.read<ProductCubit>().loadProducts(
+              supplierId: widget.supplier.id,
+              searchQuery: query,
+            );
+      }
+    });
   }
 
   @override
@@ -116,9 +125,15 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
                 if (state.error != null && state.products.isEmpty && !state.isLoading) {
                   return ErrorDisplay(
                     message: state.error!,
-                    onRetry: () => context.read<ProductCubit>().loadProducts(
-                          supplierId: widget.supplier.id,
-                        ),
+                    onRetry: () {
+                      final currentQuery = _searchController.text.isEmpty 
+                          ? null 
+                          : _searchController.text;
+                      context.read<ProductCubit>().loadProducts(
+                        supplierId: widget.supplier.id,
+                        searchQuery: currentQuery,
+                      );
+                    },
                   );
                 }
 
@@ -127,12 +142,15 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
                 }
 
                 if (state.products.isEmpty) {
+                  final hasSearchQuery = _searchController.text.isNotEmpty;
                   return EmptyStateWidget(
-                    icon: Icons.inventory_2_outlined,
+                    icon: hasSearchQuery ? Icons.search_off : Icons.inventory_2_outlined,
                     title: 'No products found',
                     subtitle: state.error != null
                         ? 'Error: ${state.error}'
-                        : 'This supplier has no products available at the moment.',
+                        : hasSearchQuery
+                            ? 'No products match your search. Try a different term.'
+                            : 'This supplier has no products available at the moment.',
                   );
                 }
 

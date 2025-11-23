@@ -35,12 +35,14 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 func (h *ProductHandler) GetConsumerProducts(c *gin.Context) {
 	consumerID := c.GetString("user_id")
 	supplierID := c.Query("supplier_id")
+	searchQuery := c.Query("search")
 	
 	// Debug logging
 	fmt.Printf("═══════════════════════════════════════\n")
 	fmt.Printf("🔍 [PRODUCT_API] GetConsumerProducts called\n")
 	fmt.Printf("🔍 [PRODUCT_API] Consumer ID from token: %s\n", consumerID)
 	fmt.Printf("🔍 [PRODUCT_API] Supplier ID query param: %s\n", supplierID)
+	fmt.Printf("🔍 [PRODUCT_API] Search query param: %s\n", searchQuery)
 	fmt.Printf("🔍 [PRODUCT_API] Email from context: %s\n", c.GetString("email"))
 	fmt.Printf("🔍 [PRODUCT_API] Role from context: %s\n", c.GetString("role"))
 	
@@ -55,10 +57,10 @@ func (h *ProductHandler) GetConsumerProducts(c *gin.Context) {
 	// Otherwise, get products from all approved linked suppliers
 	if supplierID != "" {
 		fmt.Printf("🔍 [PRODUCT_API] Getting products for specific supplier\n")
-		products, total, err = h.productRepo.GetBySupplierAndConsumer(supplierID, consumerID, page, pageSize)
+		products, total, err = h.productRepo.GetBySupplierAndConsumer(supplierID, consumerID, page, pageSize, searchQuery)
 	} else {
 		fmt.Printf("🔍 [PRODUCT_API] Getting products from all approved linked suppliers\n")
-		products, total, err = h.productRepo.GetAllByConsumer(consumerID, page, pageSize)
+		products, total, err = h.productRepo.GetAllByConsumer(consumerID, page, pageSize, searchQuery)
 	}
 
 	if err != nil {

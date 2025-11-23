@@ -35,21 +35,48 @@ func (r *SupplierRepository) Create(supplier *models.Supplier) error {
 	return err
 }
 
-func (r *SupplierRepository) GetAll(page, pageSize int) ([]models.Supplier, int, error) {
+func (r *SupplierRepository) GetAll(page, pageSize int, searchQuery string) ([]models.Supplier, int, error) {
 	var suppliers []models.Supplier
 	var total int
 
-	err := r.db.Get(&total, "SELECT COUNT(*) FROM suppliers")
-	if err != nil {
-		return nil, 0, err
+	// Build WHERE clause for search
+	whereClause := ""
+	searchArg := ""
+	if searchQuery != "" {
+		whereClause = "WHERE name ILIKE $1 OR description ILIKE $1 OR email ILIKE $1"
+		searchArg = "%" + searchQuery + "%"
 	}
 
+	// Count total with search filter
+	if searchQuery != "" {
+		err := r.db.Get(&total, "SELECT COUNT(*) FROM suppliers "+whereClause, searchArg)
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		err := r.db.Get(&total, "SELECT COUNT(*) FROM suppliers")
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+
+	// Build SELECT query with search filter
 	offset := (page - 1) * pageSize
-	err = r.db.Select(&suppliers, `
-		SELECT * FROM suppliers 
-		ORDER BY created_at DESC 
-		LIMIT $1 OFFSET $2
-	`, pageSize, offset)
-	return suppliers, total, err
+	if searchQuery != "" {
+		err := r.db.Select(&suppliers, `
+			SELECT * FROM suppliers 
+			`+whereClause+`
+			ORDER BY created_at DESC 
+			LIMIT $2 OFFSET $3
+		`, searchArg, pageSize, offset)
+		return suppliers, total, err
+	} else {
+		err := r.db.Select(&suppliers, `
+			SELECT * FROM suppliers 
+			ORDER BY created_at DESC 
+			LIMIT $1 OFFSET $2
+		`, pageSize, offset)
+		return suppliers, total, err
+	}
 }
 

@@ -56,41 +56,68 @@ func (r *ProductRepository) GetBySupplier(supplierID string, page, pageSize int)
 	return products, total, err
 }
 
-func (r *ProductRepository) GetBySupplierAndConsumer(supplierID, consumerID string, page, pageSize int) ([]models.Product, int, error) {
+func (r *ProductRepository) GetBySupplierAndConsumer(supplierID, consumerID string, page, pageSize int, searchQuery string) ([]models.Product, int, error) {
 	var products []models.Product
 	var total int
 
-	// Verify consumer-supplier link exists and is accepted
-	query := `
+	// Build WHERE clause for search
+	searchWhere := ""
+	searchArg := ""
+	if searchQuery != "" {
+		searchWhere = "AND (p.name ILIKE $3 OR p.description ILIKE $3 OR p.category ILIKE $3)"
+		searchArg = "%" + searchQuery + "%"
+	}
+
+	// Count total with search filter
+	countQuery := `
 		SELECT COUNT(*) FROM products p
 		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
-		WHERE p.supplier_id = $1 AND cl.consumer_id = $2 AND cl.status = 'accepted'
-	`
-	err := r.db.Get(&total, query, supplierID, consumerID)
-	if err != nil {
-		return []models.Product{}, 0, err
+		WHERE p.supplier_id = $1 AND cl.consumer_id = $2 AND cl.status = 'accepted'` + searchWhere
+	if searchQuery != "" {
+		err := r.db.Get(&total, countQuery, supplierID, consumerID, searchArg)
+		if err != nil {
+			return []models.Product{}, 0, err
+		}
+	} else {
+		err := r.db.Get(&total, countQuery, supplierID, consumerID)
+		if err != nil {
+			return []models.Product{}, 0, err
+		}
 	}
 
 	offset := (page - 1) * pageSize
-	selectQuery := `
-		SELECT p.*, s.name as supplier_name FROM products p
-		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
-		INNER JOIN suppliers s ON p.supplier_id = s.id
-		WHERE p.supplier_id = $1 AND cl.consumer_id = $2 AND cl.status = 'accepted'
-		ORDER BY p.created_at DESC
-		LIMIT $3 OFFSET $4
-	`
-	err = r.db.Select(&products, selectQuery, supplierID, consumerID, pageSize, offset)
-	
-	// Ensure we always return a non-nil slice
-	if products == nil {
-		products = []models.Product{}
+	if searchQuery != "" {
+		selectQuery := `
+			SELECT p.*, s.name as supplier_name FROM products p
+			INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
+			INNER JOIN suppliers s ON p.supplier_id = s.id
+			WHERE p.supplier_id = $1 AND cl.consumer_id = $2 AND cl.status = 'accepted'` + searchWhere + `
+			ORDER BY p.created_at DESC
+			LIMIT $4 OFFSET $5
+		`
+		err := r.db.Select(&products, selectQuery, supplierID, consumerID, searchArg, pageSize, offset)
+		if products == nil {
+			products = []models.Product{}
+		}
+		return products, total, err
+	} else {
+		selectQuery := `
+			SELECT p.*, s.name as supplier_name FROM products p
+			INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
+			INNER JOIN suppliers s ON p.supplier_id = s.id
+			WHERE p.supplier_id = $1 AND cl.consumer_id = $2 AND cl.status = 'accepted'
+			ORDER BY p.created_at DESC
+			LIMIT $3 OFFSET $4
+		`
+		err := r.db.Select(&products, selectQuery, supplierID, consumerID, pageSize, offset)
+		if products == nil {
+			products = []models.Product{}
+		}
+		return products, total, err
 	}
-	
-	return products, total, err
 }
 
-func (r *ProductRepository) GetAllByConsumer(consumerID string, page, pageSize int) ([]models.Product, int, error) {
+func (r *ProductRepository) GetAllByConsumer(consumerID string, page, pageSize int, searchQuery string) ([]models.Product, int, error) {
 	var products []models.Product
 	var total int
 
@@ -98,6 +125,15 @@ func (r *ProductRepository) GetAllByConsumer(consumerID string, page, pageSize i
 	fmt.Printf("🔍 [PRODUCT_REPO] GetAllByConsumer called\n")
 	fmt.Printf("🔍 [PRODUCT_REPO] Consumer ID: %s\n", consumerID)
 	fmt.Printf("🔍 [PRODUCT_REPO] Page: %d, PageSize: %d\n", page, pageSize)
+	fmt.Printf("🔍 [PRODUCT_REPO] Search Query: %s\n", searchQuery)
+
+	// Build WHERE clause for search
+	searchWhere := ""
+	searchArg := ""
+	if searchQuery != "" {
+		searchWhere = "AND (p.name ILIKE $2 OR p.description ILIKE $2 OR p.category ILIKE $2)"
+		searchArg = "%" + searchQuery + "%"
+	}
 
 	// First, check if consumer has any accepted links
 	var linkCount int
@@ -113,57 +149,42 @@ func (r *ProductRepository) GetAllByConsumer(consumerID string, page, pageSize i
 	countQuery := `
 		SELECT COUNT(*) FROM products p
 		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
-		WHERE cl.consumer_id = $1 AND cl.status = 'accepted'
-	`
-	err = r.db.Get(&total, countQuery, consumerID)
+		WHERE cl.consumer_id = $1 AND cl.status = 'accepted'` + searchWhere
+	if searchQuery != "" {
+		err = r.db.Get(&total, countQuery, consumerID, searchArg)
+	} else {
+		err = r.db.Get(&total, countQuery, consumerID)
+	}
 	if err != nil {
 		fmt.Printf("❌ [PRODUCT_REPO] Error counting products: %v\n", err)
 		return []models.Product{}, 0, err
 	}
 	fmt.Printf("🔍 [PRODUCT_REPO] Total products found: %d\n", total)
 
-	// Debug: Check which suppliers are linked
-	var linkedSuppliers []string
-	supplierCheckQuery := `SELECT supplier_id FROM consumer_links WHERE consumer_id = $1 AND status = 'accepted'`
-	err = r.db.Select(&linkedSuppliers, supplierCheckQuery, consumerID)
-	if err != nil {
-		fmt.Printf("⚠️  [PRODUCT_REPO] Error getting linked suppliers: %v\n", err)
-	} else {
-		fmt.Printf("🔍 [PRODUCT_REPO] Linked supplier IDs: %v\n", linkedSuppliers)
-		// Check products for each supplier
-		for _, supplierID := range linkedSuppliers {
-			var supplierProductCount int
-			supplierProductQuery := `SELECT COUNT(*) FROM products WHERE supplier_id = $1`
-			err2 := r.db.Get(&supplierProductCount, supplierProductQuery, supplierID)
-			if err2 != nil {
-				fmt.Printf("⚠️  [PRODUCT_REPO] Error counting products for supplier %s: %v\n", supplierID, err2)
-			} else {
-				fmt.Printf("🔍 [PRODUCT_REPO] Supplier %s has %d products\n", supplierID, supplierProductCount)
-			}
-		}
-	}
-	
-	// Additional debug: Verify consumer exists in users table
-	var userEmail string
-	userCheckQuery := `SELECT email FROM users WHERE id = $1`
-	err = r.db.Get(&userEmail, userCheckQuery, consumerID)
-	if err != nil {
-		fmt.Printf("❌ [PRODUCT_REPO] Consumer ID %s NOT FOUND in users table: %v\n", consumerID, err)
-	} else {
-		fmt.Printf("✅ [PRODUCT_REPO] Consumer ID %s belongs to email: %s\n", consumerID, userEmail)
-	}
-
 	offset := (page - 1) * pageSize
-	selectQuery := `
-		SELECT p.*, s.name as supplier_name FROM products p
-		INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
-		INNER JOIN suppliers s ON p.supplier_id = s.id
-		WHERE cl.consumer_id = $1 AND cl.status = 'accepted'
-		ORDER BY p.created_at DESC
-		LIMIT $2 OFFSET $3
-	`
-	fmt.Printf("🔍 [PRODUCT_REPO] Executing query with consumer_id=%s, limit=%d, offset=%d\n", consumerID, pageSize, offset)
-	err = r.db.Select(&products, selectQuery, consumerID, pageSize, offset)
+	if searchQuery != "" {
+		selectQuery := `
+			SELECT p.*, s.name as supplier_name FROM products p
+			INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
+			INNER JOIN suppliers s ON p.supplier_id = s.id
+			WHERE cl.consumer_id = $1 AND cl.status = 'accepted'` + searchWhere + `
+			ORDER BY p.created_at DESC
+			LIMIT $3 OFFSET $4
+		`
+		fmt.Printf("🔍 [PRODUCT_REPO] Executing query with consumer_id=%s, search=%s, limit=%d, offset=%d\n", consumerID, searchQuery, pageSize, offset)
+		err = r.db.Select(&products, selectQuery, consumerID, searchArg, pageSize, offset)
+	} else {
+		selectQuery := `
+			SELECT p.*, s.name as supplier_name FROM products p
+			INNER JOIN consumer_links cl ON p.supplier_id = cl.supplier_id
+			INNER JOIN suppliers s ON p.supplier_id = s.id
+			WHERE cl.consumer_id = $1 AND cl.status = 'accepted'
+			ORDER BY p.created_at DESC
+			LIMIT $2 OFFSET $3
+		`
+		fmt.Printf("🔍 [PRODUCT_REPO] Executing query with consumer_id=%s, limit=%d, offset=%d\n", consumerID, pageSize, offset)
+		err = r.db.Select(&products, selectQuery, consumerID, pageSize, offset)
+	}
 	if err != nil {
 		fmt.Printf("❌ [PRODUCT_REPO] Error selecting products: %v\n", err)
 		return []models.Product{}, 0, err

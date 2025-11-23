@@ -37,8 +37,9 @@ func NewConsumerHandler(
 func (h *ConsumerHandler) GetSuppliers(c *gin.Context) {
 	page, pageSize := ParsePagination(c)
 	consumerID := c.GetString("user_id")
+	searchQuery := c.Query("search")
 
-	suppliers, total, err := h.supplierRepo.GetAll(page, pageSize)
+	suppliers, total, err := h.supplierRepo.GetAll(page, pageSize, searchQuery)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse(err.Error()))
 		return

@@ -33,6 +33,7 @@ ON CONFLICT (email) DO NOTHING;
 INSERT INTO products (id, name, description, image_url, unit, price, discount, stock_level, min_order_quantity, supplier_id, category, created_at)
 VALUES
   ('a1111111-1111-1111-1111-111111111111', 'Organic Romaine Lettuce', 'Fresh organic romaine lettuce, perfect for salads and wraps', 'https://farmlinkhawaii.com/cdn/shop/files/organic_20romaine-800x533.jpg?v=1724305179', 'case', 24.99, 0.00, 150, 1, '11111111-1111-1111-1111-111111111111', 'Organic', now()),
+  ('a1111112-1111-1111-1111-111111111111', 'Fresh Organic Tomatoes', 'Vine-ripened organic tomatoes, perfect for salads and cooking', 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tomato_je.jpg', 'case', 19.99, 0.00, 120, 1, '11111111-1111-1111-1111-111111111111', 'Organic', now()),
   ('a2222221-2222-2222-2222-222222222222', 'Atlantic Salmon Fillet', 'Fresh Atlantic salmon fillets, skin-on, premium grade', NULL, 'lb', 18.99, 0.00, 200, 5, '22222222-2222-2222-2222-222222222222', 'Meat', now()),
   ('a3333331-3333-3333-3333-333333333333', 'Prime Ribeye Steaks', 'USDA Prime ribeye steaks, 12 oz each', NULL, 'piece', 32.99, 0.00, 120, 4, '33333333-3333-3333-3333-333333333333', 'Meat', now()),
   ('a4444441-4444-4444-4444-444444444444', 'Fresh Mozzarella', 'Fresh mozzarella cheese, made daily', NULL, 'lb', 9.99, 0.00, 200, 5, '44444444-4444-4444-4444-444444444444', 'Dairy', now()),

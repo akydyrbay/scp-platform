@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../cubits/supplier_cubit.dart';
@@ -18,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _searchController = TextEditingController();
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -28,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
@@ -38,11 +41,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onSearch(String query) {
-    if (query.isEmpty) {
-      context.read<SupplierCubit>().discoverSuppliers();
-    } else {
-      context.read<SupplierCubit>().discoverSuppliers(searchQuery: query);
-    }
+    // Cancel previous timer
+    _debounceTimer?.cancel();
+    
+    // Debounce search: wait 500ms after user stops typing
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (query.isEmpty) {
+        context.read<SupplierCubit>().discoverSuppliers();
+      } else {
+        context.read<SupplierCubit>().discoverSuppliers(searchQuery: query);
+      }
+    });
   }
 
   void _handleSendRequest(String supplierId) async {
@@ -84,7 +93,12 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              context.read<SupplierCubit>().discoverSuppliers();
+              final currentQuery = _searchController.text.isEmpty 
+                  ? null 
+                  : _searchController.text;
+              context.read<SupplierCubit>().discoverSuppliers(
+                searchQuery: currentQuery,
+              );
             },
           ),
         ],
@@ -120,7 +134,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (state.error != null && state.suppliers.isEmpty && !state.isLoading) {
                   return ErrorDisplay(
                     message: state.error!,
-                    onRetry: () => context.read<SupplierCubit>().discoverSuppliers(),
+                    onRetry: () {
+                      final currentQuery = _searchController.text.isEmpty 
+                          ? null 
+                          : _searchController.text;
+                      context.read<SupplierCubit>().discoverSuppliers(
+                        searchQuery: currentQuery,
+                      );
+                    },
                   );
                 }
 
@@ -129,12 +150,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 if (state.suppliers.isEmpty) {
+                  final hasSearchQuery = _searchController.text.isNotEmpty;
                   return EmptyStateWidget(
-                    icon: Icons.business_outlined,
+                    icon: hasSearchQuery ? Icons.search_off : Icons.business_outlined,
                     title: 'No suppliers found',
                     subtitle: state.error != null 
                         ? 'Error: ${state.error}'
-                        : 'No suppliers available at the moment.',
+                        : hasSearchQuery
+                            ? 'No suppliers match your search. Try a different term.'
+                            : 'No suppliers available at the moment.',
                   );
                 }
 
