@@ -66,3 +66,4 @@ supplier-keystore-base64.txt
 
 # Android local.properties (machine-specific paths)
 **/local.properties
+.vscode/

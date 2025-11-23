@@ -1,49 +1,130 @@
-# SCP Supplier Sales App
+# SCP Mobile Apps
 
-Mobile application for Supplier Sales Representatives to communicate with consumers, handle complaints, and manage customer relationships.
+Flutter mobile applications for the SCP Platform.
 
-## Quick Start
+## Apps
 
+- **Consumer App** (`scp-consumer-app`) - For restaurants and hotels
+- **Supplier Sales App** (`scp-supplier-sales-app`) - For supplier sales representatives
+
+## Setup
+
+### Prerequisites
+- Flutter SDK 3.24.0+
+- Dart SDK
+
+### Installation
+
+1. **Install shared package dependencies**:
+   ```bash
+   cd scp-mobile-shared
+   flutter pub get
+   ```
+
+2. **Setup Consumer App**:
+   ```bash
+   cd scp-consumer-app
+   flutter pub get
+   flutter gen-l10n
+   ```
+
+3. **Setup Supplier Sales App**:
+   ```bash
+   cd scp-supplier-sales-app
+   flutter pub get
+   flutter gen-l10n
+   ```
+
+## Running
+
+### Development
 ```bash
-# Install dependencies
-flutter pub get
+# Consumer App
+cd scp-consumer-app
+flutter run --dart-define=ENV=development
 
-# Generate localizations
-flutter gen-l10n
-
-# Run the app
-flutter run
-
-# Build for production
-flutter build apk --release
+# Supplier Sales App
+cd scp-supplier-sales-app
+flutter run --dart-define=ENV=development
 ```
 
-## Features
+### iOS
+```bash
+flutter run -d ios
+```
 
-- 🔐 Authentication for sales reps
-- 📊 Dashboard with live statistics
-- 💬 Enhanced chat with canned replies
-- ⚠️ Complaint logging and management
-- ⬆️ One-tap escalation to manager
-- 📋 Read-only order viewing
-- 🔔 Real-time notifications
-- 🌍 Multi-language support (EN, RU, KK)
+### Android
+```bash
+flutter run -d android
+```
 
-## Shared Dependencies
+## Building for Production
 
-This app uses the `scp_mobile_shared` package for:
-- Models, services, widgets
-- Configuration and utilities
-- Shared business logic
+### Android
+```bash
+# APK
+flutter build apk --release --dart-define=ENV=production
 
-## Key Differentiators
+# App Bundle
+flutter build appbundle --release --dart-define=ENV=production
+```
 
-- **Purple theme** (vs. Consumer blue)
-- **Canned replies** for quick responses
-- **Complaint management** with escalation
-- **Communication-first** UI design
+### iOS
+```bash
+flutter build ios --release --dart-define=ENV=production
+# Then archive in Xcode
+```
 
-## For More Details
+## Key Features
 
-See the main [README](../README.md) for complete documentation.
+### Consumer App
+- Supplier discovery and search
+- Link request management
+- Product catalog browsing
+- Shopping cart and ordering
+- Order tracking
+- Real-time chat
+- Multi-language (EN, RU, KK)
 
+### Supplier Sales App
+- Dashboard with statistics
+- Chat with canned replies
+- Complaint management
+- Order viewing
+- Real-time notifications
+- Multi-language (EN, RU, KK)
+
+## Shared Package
+
+Both apps use `scp-mobile-shared` for:
+- Data models
+- API services
+- UI widgets
+- Configuration
+
+## Configuration
+
+### API URL
+- **Development**: Auto-configured to `http://localhost:3000/api/v1`
+- **Custom**: `flutter run --dart-define=API_BASE_URL=http://your-api-url/api/v1`
+
+### Environment
+- `ENV=development` - Development mode (default)
+- `ENV=production` - Production mode
+
+## Testing
+
+```bash
+# Shared package
+cd scp-mobile-shared && flutter test
+
+# Consumer app
+cd scp-consumer-app && flutter test
+
+# Supplier app
+cd scp-supplier-sales-app && flutter test
+```
+
+---
+
+For more details, see the main [README](../README.md).
