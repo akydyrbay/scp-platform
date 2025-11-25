@@ -94,83 +94,94 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search bar
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search products...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _onSearch('');
-                        },
-                      )
-                    : null,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search products...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            _onSearch('');
+                          },
+                        )
+                      : null,
+                ),
+                onChanged: _onSearch,
               ),
-              onChanged: _onSearch,
             ),
-          ),
-          // Products list
-          Expanded(
-            child: BlocBuilder<ProductCubit, ProductState>(
-              builder: (context, state) {
-                // Show error if there is one
-                if (state.error != null && state.products.isEmpty && !state.isLoading) {
-                  return ErrorDisplay(
-                    message: state.error!,
-                    onRetry: () {
-                      final currentQuery = _searchController.text.isEmpty 
-                          ? null 
-                          : _searchController.text;
-                      context.read<ProductCubit>().loadProducts(
-                        supplierId: widget.supplier.id,
-                        searchQuery: currentQuery,
-                      );
-                    },
-                  );
-                }
+            // Products list
+            Expanded(
+              child: BlocBuilder<ProductCubit, ProductState>(
+                builder: (context, state) {
+                  // Show error if there is one
+                  if (state.error != null && state.products.isEmpty && !state.isLoading) {
+                    return ErrorDisplay(
+                      message: state.error!,
+                      onRetry: () {
+                        final currentQuery = _searchController.text.isEmpty 
+                            ? null 
+                            : _searchController.text;
+                        context.read<ProductCubit>().loadProducts(
+                          supplierId: widget.supplier.id,
+                          searchQuery: currentQuery,
+                        );
+                      },
+                    );
+                  }
 
-                if (state.isLoading && state.products.isEmpty) {
-                  return const LoadingIndicator();
-                }
+                  if (state.isLoading && state.products.isEmpty) {
+                    return const LoadingIndicator();
+                  }
 
-                if (state.products.isEmpty) {
-                  final hasSearchQuery = _searchController.text.isNotEmpty;
-                  return EmptyStateWidget(
-                    icon: hasSearchQuery ? Icons.search_off : Icons.inventory_2_outlined,
-                    title: 'No products found',
-                    subtitle: state.error != null
-                        ? 'Error: ${state.error}'
-                        : hasSearchQuery
-                            ? 'No products match your search. Try a different term.'
-                            : 'This supplier has no products available at the moment.',
-                  );
-                }
+                  if (state.products.isEmpty) {
+                    final hasSearchQuery = _searchController.text.isNotEmpty;
+                    return EmptyStateWidget(
+                      icon: hasSearchQuery ? Icons.search_off : Icons.inventory_2_outlined,
+                      title: 'No products found',
+                      subtitle: state.error != null
+                          ? 'Error: ${state.error}'
+                          : hasSearchQuery
+                              ? 'No products match your search. Try a different term.'
+                              : 'This supplier has no products available at the moment.',
+                    );
+                  }
 
-                return GridView.builder(
-                  padding: const EdgeInsets.all(8),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.7,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                  ),
-                  itemCount: state.products.length,
-                  itemBuilder: (context, index) {
-                    final product = state.products[index];
-                    return ProductCard(
-                      product: product,
-                      onTap: () {
-                        // Optional: Could show product details dialog or navigate to detail page
-                        // For now, just add to cart on tap if available
-                        if (product.isAvailable && product.stockQuantity > 0) {
+                  return GridView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                      childAspectRatio: 0.7,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                    ),
+                    itemCount: state.products.length,
+                    itemBuilder: (context, index) {
+                      final product = state.products[index];
+                      return ProductCard(
+                        product: product,
+                        onTap: () {
+                          // Optional: Could show product details dialog or navigate to detail page
+                          // For now, just add to cart on tap if available
+                          if (product.isAvailable && product.stockQuantity > 0) {
+                            context.read<CartCubit>().addToCart(product);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('${product.name} added to cart'),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                        onAddToCart: () {
                           context.read<CartCubit>().addToCart(product);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -178,24 +189,15 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
                               duration: const Duration(seconds: 2),
                             ),
                           );
-                        }
-                      },
-                      onAddToCart: () {
-                        context.read<CartCubit>().addToCart(product);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${product.name} added to cart'),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -25,6 +25,7 @@ class ProductCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Product Image
             ClipRRect(
@@ -53,11 +54,13 @@ class ProductCard extends StatelessWidget {
               ),
             ),
             // Product Details
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                   Text(
                     product.name,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -108,7 +111,8 @@ class ProductCard extends StatelessWidget {
                         label: const Text('Add to Cart'),
                       ),
                     ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

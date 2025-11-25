@@ -2,16 +2,6 @@
 
 B2B platform connecting institutional consumers (restaurants, hotels) with suppliers. Complete ecosystem with backend API, mobile applications, and web portal.
 
-## CI/CD Status
-
-[![CI/CD Pipeline](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci-cd.yml)
-[![Backend Tests](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/CD%20Pipeline/badge.svg?label=backend)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci-cd.yml)
-[![Consumer App Tests](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/CD%20Pipeline/badge.svg?label=consumer-app)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci-cd.yml)
-[![Supplier App Tests](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/CD%20Pipeline/badge.svg?label=supplier-app)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci-cd.yml)
-[![Web Portal Tests](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/CD%20Pipeline/badge.svg?label=web-portal)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci-cd.yml)
-
-> **Note:** Replace `YOUR_USERNAME` and `YOUR_REPO` in the badge URLs with your actual GitHub username and repository name.
-
 ## Project Structure
 
 ```
