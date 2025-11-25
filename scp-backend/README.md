@@ -128,6 +128,3 @@ go test ./...
 3. Configure CORS origins properly
 4. Use reverse proxy (nginx) for SSL
 
----
-
-For complete API documentation, see [Backend Integration Guide](../docs/BACKEND_INTEGRATION_GUIDE.md).

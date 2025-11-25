@@ -74,7 +74,7 @@ func main() {
 	complaintHandler := handlers.NewComplaintHandler(complaintRepo, conversationRepo, messageRepo)
 	chatHandler := handlers.NewChatHandler(conversationRepo, messageRepo)
 	notificationHandler := handlers.NewNotificationHandler(notificationRepo)
-	supplierHandler := handlers.NewSupplierHandler(supplierRepo)
+	supplierHandler := handlers.NewSupplierHandler(supplierRepo, userRepo)
 	uploadHandler := handlers.NewUploadHandler(uploadDir)
 
 	// Setup routes

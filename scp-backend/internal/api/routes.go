@@ -51,6 +51,9 @@ func SetupRoutes(
 			}
 		}
 
+		// Supplier registration (public)
+		v1.POST("/supplier/register", supplierHandler.RegisterSupplier)
+
 		// Upload routes (protected)
 		upload := v1.Group("/upload")
 		upload.Use(middleware.AuthMiddleware(jwtService))
