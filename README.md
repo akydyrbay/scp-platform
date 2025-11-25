@@ -2,6 +2,16 @@
 
 B2B platform connecting institutional consumers (restaurants, hotels) with suppliers. Complete ecosystem with backend API, mobile applications, and web portal.
 
+## CI/CD Status
+
+[![CI/CD Pipeline](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci-cd.yml)
+[![Backend Tests](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/CD%20Pipeline/badge.svg?label=backend)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci-cd.yml)
+[![Consumer App Tests](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/CD%20Pipeline/badge.svg?label=consumer-app)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci-cd.yml)
+[![Supplier App Tests](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/CD%20Pipeline/badge.svg?label=supplier-app)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci-cd.yml)
+[![Web Portal Tests](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/CD%20Pipeline/badge.svg?label=web-portal)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions/workflows/ci-cd.yml)
+
+> **Note:** Replace `YOUR_USERNAME` and `YOUR_REPO` in the badge URLs with your actual GitHub username and repository name.
+
 ## Project Structure
 
 ```
@@ -100,6 +110,61 @@ All frontend apps connect to backend API:
 - **Development**: `http://localhost:3000/api/v1`
 - **Flutter**: Auto-configured (use `ENV=development`)
 - **Next.js**: Set `NEXT_PUBLIC_API_BASE_URL` in `.env.local`
+
+## CI/CD Pipeline
+
+This project uses GitHub Actions for automated testing and building:
+
+### Automated Testing
+
+The CI/CD pipeline automatically runs tests for all components:
+
+- **Go Backend**: Unit tests with coverage reporting
+- **Flutter Consumer App**: Unit tests and code analysis
+- **Flutter Supplier App**: Unit tests and code analysis
+- **Next.js Web Portal**: Linting and build verification
+
+### Android APK Builds
+
+On every push to `main` branch or manual trigger:
+
+- Builds release APKs for both Flutter apps
+- Uses matrix strategy for parallel builds
+- Uploads APKs as workflow artifacts (stored for 30 days)
+- Provides direct download links in workflow summary
+
+### Download APKs
+
+1. Go to the [Actions tab](https://github.com/YOUR_USERNAME/YOUR_REPO/actions) in your repository
+2. Select the latest workflow run
+3. Scroll to the "Artifacts" section
+4. Download the APK files:
+   - `consumer-app-apk` - Consumer App APK
+   - `supplier-app-apk` - Supplier Sales App APK
+
+### Manual Workflow Trigger
+
+You can manually trigger the workflow:
+1. Go to Actions → CI/CD Pipeline
+2. Click "Run workflow"
+3. Select branch and click "Run workflow"
+
+### Release Builds
+
+For production releases, use the `Release Build` workflow:
+1. Go to Actions → Release Build
+2. Click "Run workflow"
+3. Enter version number (e.g., `1.0.0`)
+4. Optionally create git tags
+
+### Environment Variables
+
+The following secrets can be configured in GitHub repository settings:
+
+- `ANDROID_KEYSTORE_PASSWORD` - Password for Android keystore (optional, uses debug keys if not set)
+- `ANDROID_KEY_PASSWORD` - Password for Android signing key (optional, uses debug keys if not set)
+
+> **Note:** For production builds, configure proper Android signing keys in repository secrets.
 
 ## Documentation
 
